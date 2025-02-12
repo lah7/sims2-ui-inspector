@@ -13,13 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-# Copyright (C) 2022, 2024-2025 Luke Horwell <code@horwell.me>
+# Copyright (C) 2024-2025 Luke Horwell <code@horwell.me>
 #
 """
-Qt interface for browsing and recreating user interfaces from
-The Sims 2 by parsing .uiScript files and associated graphics.
-
-Requires QWebEngineView.
+S2UI Inspector is a cross-platform PyQt6 application that browses
+and recreates user interfaces from The Sims 2. It parses UI Scripts
+and graphics for visual inspection outside the game.
 """
 import base64
 import glob
@@ -31,10 +30,6 @@ import signal
 import sys
 
 import PIL.Image
-
-# Our modules are in the parent directory
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) # pylint: disable=wrong-import-position
-
 from PyQt6.QtCore import QObject, Qt, QTimer, QUrl, pyqtSlot
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWebChannel import QWebChannel
@@ -45,7 +40,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
 
 from sims2patcher import dbpf
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "inspector_data"))
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
 
 
 def uiscript_to_html(orig: str) -> str:
@@ -248,8 +243,7 @@ class MainInspectorWindow(QMainWindow):
 
         # Window properties
         self.resize(1424, 768)
-        self.setWindowTitle("UI Inspector for The Sims 2 by lah7")
-        self.setWindowIcon(QIcon(os.path.abspath(os.path.join(DATA_DIR, "..", "..", "assets", "status_default@2x.png"))))
+        self.setWindowTitle("S2UI Inspector")
         self.show()
 
         # Auto load directory when passed as a command line argument
