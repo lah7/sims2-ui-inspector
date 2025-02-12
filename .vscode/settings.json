@@ -1,0 +1,29 @@
+{
+    /* Module may be stored outside the repository */
+    "python.autoComplete.extraPaths": [
+      "${workspaceFolder}/../sims2-4k-ui-patch/"
+    ],
+    "python.analysis.extraPaths": [
+      "${workspaceFolder}/../sims2-4k-ui-patch/"
+    ],
+    "search.followSymlinks": true,
+
+    /* Python type checking and testing */
+    "python.analysis.typeCheckingMode": "standard",
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./tests",
+        "-p",
+        "test_*.py"
+    ],
+    "pylint.args": [
+        "--rcfile=.pylintrc",
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
+    "python.analysis.autoImportCompletions": true,
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "${workspaceFolder}"
+    }
+}

@@ -1,0 +1,8 @@
+Pillow
+PyQt6
+PyQt6-WebEngine
+requests
+
+# Build only
+cx_Freeze
+pylint

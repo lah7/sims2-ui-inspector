@@ -1,0 +1,6 @@
+# Module from another repository
+/sims2patcher
+
+# Cache & Build
+__pycache__
+/build/
