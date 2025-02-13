@@ -1,0 +1,20 @@
+<svg width="64" height="64" version="1.1" viewBox="0 0 16.933 16.933" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <radialGradient id="radialGradient295" cx="92.425" cy="87.877" r="3.3503" gradientTransform="matrix(1 0 0 1.7787 0 -68.431)" gradientUnits="userSpaceOnUse">
+      <stop style="stop-color:#aebdff" offset="0"/>
+      <stop style="stop-color:#050671" offset=".87469"/>
+    </radialGradient>
+  </defs>
+  <rect x="1.0349" y="1.0349" width="14.863" height="14.863" rx="2.3304" ry="2.3304" style="fill:#757ec4;paint-order:stroke fill markers;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.5875;stroke:#3b4a95"/>
+  <rect x="8.971" y="5.8891" width="3.175" height="3.175" ry="1.0532" style="fill:#5262c7;paint-order:stroke fill markers"/>
+  <rect x="9.0449" y="9.3399" width="3.175" height="3.175" ry="1.0532" style="fill:#5262c7;paint-order:stroke fill markers"/>
+  <g transform="matrix(.84314 0 0 .84314 -72.784 -66.961)" style="fill:url(#radialGradient295);stroke:#050671">
+    <path d="m92.562 81.917-3.4867 6.0392 3.3945 5.8794 3.2744-5.6714z" style="fill-rule:evenodd;fill:url(#radialGradient295);mix-blend-mode:normal;opacity:.69725;stroke-width:.26458px;stroke:#050671"/>
+    <path d="m92.591 81.946-1.1727 6.442 4.3568-.30716z" style="fill-rule:evenodd;fill:url(#radialGradient295);mix-blend-mode:normal;stroke-width:.26458px;stroke:#050671"/>
+    <path d="m92.562 81.949-3.4238 6.0167 2.2491.41677z" style="fill-rule:evenodd;fill:url(#radialGradient295);mix-blend-mode:normal;stroke-width:.26458px;stroke:#050671"/>
+    <path d="m89.117 87.993 3.3447 5.8173-1.0928-5.3912z" style="fill-rule:evenodd;fill:url(#radialGradient295);mix-blend-mode:normal;opacity:.5;stroke-width:.26458px;stroke:#050671"/>
+  </g>
+  <rect x="13.384" y="2.076" width="1.5157" height="8.1278" rx=".75783" ry=".69611" style="fill:#aebdff;paint-order:stroke fill markers;stroke-linecap:round;stroke-linejoin:round;stroke-width:.52917;stroke:#050671"/>
+  <rect transform="rotate(90)" x="13.475" y="-10.466" width="1.5157" height="8.1278" rx=".75783" ry=".69611" style="fill:#aebdff;paint-order:stroke fill markers;stroke-linecap:round;stroke-linejoin:round;stroke-width:.52917;stroke:#050671"/>
+  <path d="m10.917 3.0104.50465.50465m-.31174-.70207.4105-.41049.54565.54565-1.9701 1.9701-.76188.20415.19186-.71605z" style="fill-rule:evenodd;fill:#aebdff;stroke-width:.32174px;stroke:#050671"/>
+</svg>
