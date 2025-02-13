@@ -28,19 +28,23 @@ import os
 import re
 import signal
 import sys
+import webbrowser
 
 import PIL.Image
 from PyQt6.QtCore import QObject, Qt, QTimer, QUrl, pyqtSlot
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
-                             QFileDialog, QHBoxLayout, QMainWindow, QSplitter,
-                             QStatusBar, QTreeWidget, QTreeWidgetItem, QWidget)
+                             QFileDialog, QHBoxLayout, QMainWindow, QMenu,
+                             QMenuBar, QMessageBox, QSplitter, QStatusBar,
+                             QTreeWidget, QTreeWidgetItem, QWidget)
 
 from sims2patcher import dbpf
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
+PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
+VERSION = "0.1.0"
 
 
 def uiscript_to_html(orig: str) -> str:
@@ -74,17 +78,12 @@ def uiscript_to_html(orig: str) -> str:
 
 class State:
     """A collection of entries from a .package file"""
-    def __init__(self):
-        self.game_dir = ""
-        self.graphics: dict[tuple, dbpf.Entry] = {} # (group_id, instance_id) -> Entry
+    file_list: list[str] = [] # List of paths
+    graphics: dict[tuple, dbpf.Entry] = {} # (group_id, instance_id) -> Entry
 
 
 class Bridge(QObject):
     """Bridge between Python and JavaScript"""
-    def __init__(self, state: State):
-        super().__init__()
-        self.state = state
-
     @pyqtSlot(str, bool, int, int, result=str) # type: ignore
     def get_image(self, image_attr: str, is_edge_image: bool, height: int, width: int) -> str:
         """
@@ -108,7 +107,7 @@ class Bridge(QObject):
             return ""
 
         try:
-            entry = self.state.graphics[(group_id, instance_id)]
+            entry = State.graphics[(group_id, instance_id)]
         except KeyError:
             print(f"Image not found: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
             return ""
@@ -173,12 +172,11 @@ class Bridge(QObject):
 
 
 class MainInspectorWindow(QMainWindow):
-    """Main interface for inspecting .uiScript files"""
+    """
+    Main interface for inspecting .uiScript files
+    """
     def __init__(self):
         super().__init__()
-
-        # Variables
-        self.state = State()
         self.items: list[QTreeWidgetItem] = []
 
         # Layout
@@ -196,7 +194,7 @@ class MainInspectorWindow(QMainWindow):
         self.file_tree.setColumnWidth(3, 130)
         self.file_tree.setColumnWidth(4, 100)
         self.file_tree.setSortingEnabled(True)
-        self.file_tree.currentItemChanged.connect(self.open_ui_file)
+        self.file_tree.currentItemChanged.connect(self.inspect_ui_file)
 
         self.list_dock = QDockWidget("UI Scripts", self)
         self.list_dock.setMinimumWidth(400)
@@ -236,58 +234,122 @@ class MainInspectorWindow(QMainWindow):
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
         self.webview.page().setWebChannel(self.channel) # type: ignore
-
-        # Register bridge object
-        self.bridge = Bridge(self.state)
+        self.bridge = Bridge()
         self.channel.registerObject("python", self.bridge)
+
+        # Menu bar
+        self.menu_bar = QMenuBar()
+        self.setMenuBar(self.menu_bar)
+
+        # -- File
+        self.menu_file = QMenu("File")
+        self.menu_bar.addMenu(self.menu_file)
+
+        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Package...")
+        self.action_open_pkg.setShortcut(QKeySequence.StandardKey.Open)
+        self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
+        self.menu_file.addAction(self.action_open_pkg)
+
+        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "Open Game Folder...")
+        self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
+        self.menu_file.addAction(self.action_open_dir)
+
+        self.menu_file.addSeparator()
+        self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
+        self.action_exit.triggered.connect(self.close)
+        self.menu_file.addAction(self.action_exit)
+
+        # -- Help
+        self.menu_help = QMenu("Help")
+        self.menu_bar.addMenu(self.menu_help)
+
+        self.action_online = QAction(QIcon.fromTheme("globe"), "View on GitHub")
+        self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
+        self.menu_help.addAction(self.action_online)
+
+        self.menu_help.addSeparator()
+        self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About Qt")
+        self.action_about_qt.triggered.connect(lambda: QMessageBox.aboutQt(self))
+        self.menu_help.addAction(self.action_about_qt)
+
+        self.action_about_app = QAction(QIcon.fromTheme("help-about"), "About S2UI Inspector")
+        self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
+        self.menu_help.addAction(self.action_about_app)
 
         # Window properties
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
         self.show()
+        self.status_bar.showMessage("Ready")
 
-        # Auto load directory when passed as a command line argument
+        # Auto load file/folder when passed as a command line argument
         if len(sys.argv) > 1:
-            self.state.game_dir = sys.argv[1]
-            if os.path.exists(self.state.game_dir):
+            path = sys.argv[1]
+            if os.path.exists(path) and os.path.isdir(path):
+                self.discover_files(path)
+                self.load_files()
+            elif os.path.exists(path):
+                State.file_list = [path]
                 self.load_files()
         else:
-            self.browse()
+            self.browse(open_dir=True)
 
-    def browse(self):
-        """Show the file dialog to select a package file"""
+    def browse(self, open_dir: bool):
+        """
+        Show the file/folder dialog to select a package file.
+        """
         browser = QFileDialog(self)
-        browser.setFileMode(QFileDialog.FileMode.Directory)
-        browser.setViewMode(QFileDialog.ViewMode.List)
+        if open_dir:
+            browser.setFileMode(QFileDialog.FileMode.Directory)
+            browser.setViewMode(QFileDialog.ViewMode.List)
+        else:
+            browser.setFileMode(QFileDialog.FileMode.ExistingFile)
+            browser.setViewMode(QFileDialog.ViewMode.Detail)
+            browser.setNameFilter("The Sims 2 Package Files (*.package CaSIEUI.data)")
 
         if browser.exec() == QFileDialog.DialogCode.Accepted:
-            self.state.game_dir = browser.selectedFiles()[0]
+            self.clear_state()
+            if open_dir:
+                self.discover_files(browser.selectedFiles()[0])
+            else:
+                State.file_list = browser.selectedFiles()
             self.load_files()
-        else:
-            sys.exit(130)
+
+        self.setStatusTip("No files opened.")
+
+    def clear_state(self):
+        """
+        Reset the inspector ready to open new files.
+        """
+        State.graphics = {}
+        self.file_tree.clear()
+
+    def discover_files(self, path: str):
+        """
+        Gather a file list of packages containing UI scripts.
+        """
+        State.file_list = []
+        for filename in ["TSData/Res/UI/ui.package", "TSData/Res/UI/CaSIEUI.data"]:
+            State.file_list += glob.glob(f"{path}/**/{filename}", recursive=True)
+
+        if not State.file_list:
+            for filename in ["ui.package", "CaSIEUI.data"]:
+                State.file_list += glob.glob(f"{path}/**/{filename}", recursive=True)
 
     def load_files(self):
-        """Load all UI scripts found in game directories"""
-        self.status_bar.showMessage(f"Loading UI scripts from: {self.state.game_dir}")
+        """
+        Load all UI scripts found in game directories.
+        Display unique instances of UI scripts, and where they were found.
+        """
+        self.status_bar.showMessage(f"Opening {len(State.file_list)} packages...")
         self.setCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
-
-        # Reset state
-        self.state.graphics = {}
-        for item in self.items:
-            item.takeChildren()
-        self.items = []
-
-        # Locate package files with UI scripts
-        file_list: list[str] = []
-        for filename in ["TSData/Res/UI/ui.package", "TSData/Res/UI/CaSIEUI.data"]:
-            file_list += glob.glob(self.state.game_dir + f"/**/{filename}", recursive=True)
 
         ui_dups: dict[tuple, list[dbpf.Entry]] = {}
         entry_to_game: dict[dbpf.Entry, str] = {}
         entry_to_package: dict[dbpf.Entry, str] = {}
 
-        for path in file_list:
+        for path in State.file_list:
             package = dbpf.DBPF(path)
             package_name = os.path.basename(path)
 
@@ -311,7 +373,7 @@ class MainInspectorWindow(QMainWindow):
 
             # Graphics can be looked up by group and instance ID
             for entry in [entry for entry in package.entries if entry.type_id == dbpf.TYPE_IMAGE]:
-                self.state.graphics[(entry.group_id, entry.instance_id)] = entry
+                State.graphics[(entry.group_id, entry.instance_id)] = entry
 
         self.status_bar.showMessage(f"Reading {len(ui_dups.keys())} UI scripts...")
         QApplication.processEvents()
@@ -373,14 +435,19 @@ class MainInspectorWindow(QMainWindow):
                 item.setText(4, f"{len(games)} games")
 
         total = len(ui_dups.keys())
-        self.status_bar.showMessage(f"Found {total} UI scripts from {self.state.game_dir}", 3000)
+        self.status_bar.showMessage(f"Found {total} UI scripts", 3000)
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
         timer = QTimer(self)
         timer.singleShot(1000, self.preload_files)
 
-    def open_ui_file(self, item: QTreeWidgetItem):
-        """Open the selected .uiScript file in the web view"""
+    def inspect_ui_file(self, item: QTreeWidgetItem):
+        """
+        Open the selected .uiScript file in the web view.
+        """
+        if not item:
+            return
+
         entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
 
         try:
@@ -392,9 +459,13 @@ class MainInspectorWindow(QMainWindow):
         self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(f"{DATA_DIR}/"))
 
     def preload_files(self):
-        """Continue loading files in the background to identify captions and binary files"""
-        for item in self.items:
+        """
+        Continue loading files in the background to identify captions.
+        """
+        while self.items:
+            item = self.items.pop(0)
             entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
+
             if entry.decompressed_size > 1024 * 1024: # Likely binary (over 1 MiB)
                 item.setDisabled(True)
                 item.setText(2, "Binary data")
