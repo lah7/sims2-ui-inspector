@@ -11,7 +11,7 @@ build_exe_options = {
     "excludes": ["unittest"],
     "includes": ["sims2patcher"],
     "include_files": [
-        ("data/icon.ico", "data/icon.ico"),
+        ("data/", "data/"),
     ],
     "optimize": "2",
 }
