@@ -42,9 +42,20 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
 
 from sims2patcher import dbpf
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "data"))
 PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
 VERSION = "0.1.0"
+
+
+@staticmethod
+def get_resource(filename: str) -> str:
+    """
+    Get a resource bundled with the application or from the same directory as the program.
+    """
+    if getattr(sys, "frozen", False):
+        data_dir = os.path.join(os.path.dirname(sys.executable), "data")
+    else:
+        data_dir = os.path.join(os.path.dirname(__file__), "data")
+    return os.path.join(data_dir, filename)
 
 
 def uiscript_to_html(orig: str) -> str:
@@ -279,7 +290,7 @@ class MainInspectorWindow(QMainWindow):
         # Window properties
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
-        self.setWindowIcon(QIcon(os.path.abspath(os.path.join(DATA_DIR, "icon.ico"))))
+        self.setWindowIcon(QIcon(os.path.abspath(get_resource("icon.ico"))))
         self.show()
         self.status_bar.showMessage("Ready")
 
@@ -455,9 +466,9 @@ class MainInspectorWindow(QMainWindow):
             html = uiscript_to_html(entry.data.decode("utf-8"))
         except UnicodeDecodeError:
             html = "Unable to decode. It may be binary data."
-        with open(os.path.join(DATA_DIR, "inspector.html"), "r", encoding="utf-8") as f:
+        with open(get_resource("inspector.html"), "r", encoding="utf-8") as f:
             html = f.read().replace("PLACEHOLDER", html)
-        self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(f"{DATA_DIR}/"))
+        self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(get_resource("")))
 
     def preload_files(self):
         """
