@@ -1,0 +1,38 @@
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  pylint:
+    name: Python
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13", "3.12", "3.11", "3.10"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: ${{ matrix.python-version }}
+            architecture: 'x64'
+            cache: 'pip'
+            cache-dependency-path: '**/requirements.txt'
+
+      - name: Download sims2patcher modules
+        run: |
+          git clone --depth 1 https://github.com/lah7/sims2-4k-ui-patch.git
+          mv sims2-4k-ui-patch/sims2patcher ./
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Check Python code for errors
+        run: |
+          pylint \
+            --rcfile=.pylintrc \
+            --disable=R \
+            *.py **/*.py
