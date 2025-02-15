@@ -279,7 +279,7 @@ class MainInspectorWindow(QMainWindow):
         # Window properties
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
-        self.setWindowIcon(QIcon(os.path.abspath(os.path.join(DATA_DIR, "icon.svg"))))
+        self.setWindowIcon(QIcon(os.path.abspath(os.path.join(DATA_DIR, "icon.ico"))))
         self.show()
         self.status_bar.showMessage("Ready")
 
