@@ -20,18 +20,15 @@ S2UI Inspector is a cross-platform PyQt6 application that browses
 and recreates user interfaces from The Sims 2. It parses UI Scripts
 and graphics for visual inspection outside the game.
 """
-import base64
 import glob
 import hashlib
-import io
 import os
 import re
 import signal
 import sys
 import webbrowser
 
-import PIL.Image
-from PyQt6.QtCore import QObject, Qt, QTimer, QUrl, pyqtSlot
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QAction, QIcon, QKeySequence
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -40,6 +37,8 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
                              QMenuBar, QMessageBox, QSplitter, QStatusBar,
                              QTreeWidget, QTreeWidgetItem, QWidget)
 
+from s2ui.bridge import Bridge, uiscript_to_html
+from s2ui.state import State
 from sims2patcher import dbpf
 
 PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
@@ -56,130 +55,6 @@ def get_resource(filename: str) -> str:
     else:
         data_dir = os.path.join(os.path.dirname(__file__), "data")
     return os.path.join(data_dir, filename)
-
-
-def uiscript_to_html(orig: str) -> str:
-    """
-    Convert .uiscript files to plain HTML.
-    UI Scripts are XML-like formats with unquoted attribute values.
-
-    Example:
-        <LEGACY clsid=GZWinGen iid=IGZWinGen area=(10,10,605,432) >
-
-    Becomes:
-        <div class="GZWinGen" id="IGZWinGen" x="10" y="10" width="605" height="432"></div>
-    """
-    output = ""
-    for line in orig.split("\n"):
-        if line.startswith("#"):
-            continue
-        output += line + "\n"
-
-    # Replace <LEGACY> and <CHILDREN> tags with <div>
-    output = output.replace("<LEGACY", "<div class=\"LEGACY\"")
-    output = output.replace("<CHILDREN", "<div class=\"CHILDREN\"")
-    output = output.replace("</LEGACY>", "</div>")
-    output = output.replace("</CHILDREN>", "</div>")
-
-    # <LEGACY> tags didn't have closing tags, add one if not present
-    output = output.replace(" >", "></div>")
-
-    return output
-
-
-class State:
-    """A collection of entries from a .package file"""
-    file_list: list[str] = [] # List of paths
-    graphics: dict[tuple, dbpf.Entry] = {} # (group_id, instance_id) -> Entry
-
-
-class Bridge(QObject):
-    """Bridge between Python and JavaScript"""
-    @pyqtSlot(str, bool, int, int, result=str) # type: ignore
-    def get_image(self, image_attr: str, is_edge_image: bool, height: int, width: int) -> str:
-        """
-        Return a base64 encoded PNG image for a TGA graphic extracted from the package.
-
-        Additional attributes will be read to determine whether post-processing
-        is required (such as to render a dialog background).
-
-        Expected:
-            - image_attr: "{group_id, instance_id}"
-            - wparam_attr: "0x0300d422,uint32,1"
-            - is_edge_image: Whether edgeimage="yes" or "blttype="edge" is set
-            - height and width of element (for post processing purposes)
-        """
-        try:
-            _group_id, _instance_id = image_attr[1:-1].split(",")
-            group_id = int(_group_id, 16)
-            instance_id = int(_instance_id, 16)
-        except ValueError:
-            print(f"Invalid image group/instance ID: {image_attr}")
-            return ""
-
-        try:
-            entry = State.graphics[(group_id, instance_id)]
-        except KeyError:
-            print(f"Image not found: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
-            return ""
-
-        # Convert to PNG as browser doesn't support TGA
-        io_out = io.BytesIO()
-        try:
-            io_in = io.BytesIO(entry.data_safe)
-            tga = PIL.Image.open(io_in)
-            tga = tga.convert("RGBA") # Remove transparency
-            tga.save(io_out, format="PNG")
-        except dbpf.errors.QFSError:
-            print(f"Image failed to extract: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
-            return ""
-
-        # Post processing required?
-        if is_edge_image:
-            io_out = self._render_dialog_image(io_out, height, width)
-
-        return base64.b64encode(io_out.getvalue()).decode("utf-8")
-
-    def _render_dialog_image(self, data_io: io.BytesIO, height: int, width: int) -> io.BytesIO:
-        """
-        Generate a new image replicating how the game renders a dialog background image.
-        """
-        original = PIL.Image.open(data_io).convert("RGBA")
-
-        def _copy_pixels(src_x: int, src_y: int, width: int, height: int, dst_x: int, dst_y: int):
-            """Copy pixels from one image to another"""
-            src = original.crop((src_x, src_y, src_x + width, src_y + height))
-            canvas.paste(src, (dst_x, dst_y, dst_x + width, dst_y + height))
-
-        def _tile_pixels(src_x: int, src_y: int, width: int, height: int, dst_x: int, dst_y: int, dst_x2: int, dst_y2: int):
-            """Repeat an image from the source image to the destination (within boundaries)"""
-            src = original.crop((src_x, src_y, src_x + width, src_y + height))
-            for x in range(dst_x, dst_x2, width):
-                for y in range(dst_y, dst_y2, height):
-                    canvas.paste(src, (x, y, x + width, y + height))
-
-        # Example image: Group 0x499db772, Instance 0xa9500615 (90x186 pixels)
-        canvas = PIL.Image.new("RGBA", (width, height), (0, 0, 0, 0))
-
-        # Handle the corners and edges of the dialog
-        right_edge_starts = width - 30
-        bottom_edge_starts = height - 62
-
-        _tile_pixels(30, 30, 30, 30, 30, 30, right_edge_starts, bottom_edge_starts) # Center / Inner
-
-        _tile_pixels(0, 30, 30, 30, 0, 30, 30, bottom_edge_starts)                                         # Left edge
-        _tile_pixels(60, 30, 30, 30, right_edge_starts, 30, right_edge_starts + 30, bottom_edge_starts)    # Right edge
-        _tile_pixels(30, 0, 30, 30, 30, 0, right_edge_starts, 30)                                          # Top edge
-        _tile_pixels(30, 124, 30, 62, 30, bottom_edge_starts, right_edge_starts, bottom_edge_starts + 124) # Bottom edge
-
-        _copy_pixels(0, 0, 30, 30, 0, 0)                                     # Top-left corner
-        _copy_pixels(60, 0, 30, 30, right_edge_starts, 0)                    # Top-right corner
-        _copy_pixels(0, 124, 30, 62, 0, bottom_edge_starts)                  # Bottom-left corner
-        _copy_pixels(60, 124, 30, 62, right_edge_starts, bottom_edge_starts) # Bottom-right corner
-
-        output = io.BytesIO()
-        canvas.save(output, format="PNG")
-        return output
 
 
 class MainInspectorWindow(QMainWindow):
