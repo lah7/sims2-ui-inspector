@@ -107,31 +107,11 @@ class MainInspectorWindow(QMainWindow):
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
         self.status_bar.showMessage("Loading...")
 
-        # UI Preview
-        self._webview = QWidget()
-        self._webview_layout = QHBoxLayout()
-        self._webview_layout.setContentsMargins(0, 0, 0, 0)
-        self._webview.setLayout(self._webview_layout)
-        self.webview = QWebEngineView(self._webview)
-        self._webview_layout.addWidget(self.webview)
+        # UI rendering
+        self.webview = QWebEngineView()
         self.webview.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webview.setHtml("<style>body { background: #003062; }</style>")
-
-        # Inspector View
-        self._inspector = QWidget()
-        self._inspector_layout = QHBoxLayout()
-        self._inspector_layout.setContentsMargins(0, 0, 0, 0)
-        self._inspector.setLayout(self._inspector_layout)
-        self.inspector = QWebEngineView(self._inspector)
-        self._inspector_layout.addWidget(self.inspector)
-        self.inspector.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
-        self.inspector.page().setInspectedPage(self.webview.page()) # type: ignore
-
-        self.web_splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.web_splitter.addWidget(self._webview)
-        self.web_splitter.addWidget(self._inspector)
-        self.web_splitter.setSizes([1000, 500])
-        self.base_layout.addWidget(self.web_splitter)
+        self.base_layout.addWidget(self.webview)
 
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
@@ -239,6 +219,13 @@ class MainInspectorWindow(QMainWindow):
             zoom_action.setShortcut(QKeySequence.fromString(f"Ctrl+{index + 1}"))
             self.menu_view.addAction(zoom_action)
             self._actions.append(zoom_action)
+
+        self.menu_view.addSeparator()
+
+        self.action_debug_inspect = QAction(QIcon.fromTheme("tools-symbolic"), "Web Inspector (Debug)")
+        self.action_debug_inspect.triggered.connect(self.open_web_dev_tools)
+        self.menu_view.addAction(self.action_debug_inspect)
+        self._actions.append(self.action_debug_inspect)
 
         # === Help ===
         self.menu_help = QMenu("Help")
@@ -498,6 +485,35 @@ class MainInspectorWindow(QMainWindow):
         dialog.setMinimumSize(800, 600)
         dialog.adjustSize()
         dialog.exec()
+
+    def open_web_dev_tools(self):
+        """
+        Open the web inspector for debugging this application.
+        This is a one-way action. Place the web inspector tools into the main window.
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self._webview = QWidget()
+        self._webview_layout = QHBoxLayout()
+        self._webview_layout.setContentsMargins(0, 0, 0, 0)
+        self._webview.setLayout(self._webview_layout)
+        self._webview_layout.addWidget(self.webview)
+
+        self._inspector = QWidget()
+        self._inspector_layout = QHBoxLayout()
+        self._inspector_layout.setContentsMargins(0, 0, 0, 0)
+        self._inspector.setLayout(self._inspector_layout)
+        self.inspector = QWebEngineView(self._inspector)
+        self._inspector_layout.addWidget(self.inspector)
+        self.inspector.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+        self.inspector.page().setInspectedPage(self.webview.page()) # type: ignore
+
+        self.web_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.web_splitter.addWidget(self._webview)
+        self.web_splitter.addWidget(self._inspector)
+        self.web_splitter.setSizes([1000, 500])
+
+        self.base_layout.addWidget(self.web_splitter)
+        self.action_debug_inspect.setDisabled(True)
 
 
 if __name__ == "__main__":
