@@ -29,12 +29,13 @@ import sys
 import webbrowser
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QAction, QIcon, QKeySequence
+from PyQt6.QtGui import QAction, QCursor, QFontDatabase, QIcon, QKeySequence
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
-                             QFileDialog, QHBoxLayout, QMainWindow, QMenu,
-                             QMenuBar, QMessageBox, QSplitter, QStatusBar,
+from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
+                             QDialogButtonBox, QDockWidget, QFileDialog,
+                             QHBoxLayout, QMainWindow, QMenu, QMenuBar,
+                             QMessageBox, QSplitter, QStatusBar, QTextEdit,
                              QTreeWidget, QTreeWidgetItem, QVBoxLayout,
                              QWidget)
 
@@ -73,7 +74,7 @@ class MainInspectorWindow(QMainWindow):
         self.base_widget.setLayout(self.base_layout)
         self.setCentralWidget(self.base_widget)
 
-        # File Tree
+        # File Tree for UI Scripts
         self.file_tree = QTreeWidget(self.base_widget)
         self.file_tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.file_tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
@@ -85,6 +86,10 @@ class MainInspectorWindow(QMainWindow):
         self.file_tree.setSortingEnabled(True)
         self.file_tree.currentItemChanged.connect(self.inspect_ui_file)
 
+        self.file_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.file_tree.customContextMenuRequested.connect(lambda: self.menu_item.exec(QCursor.pos()))
+
+        # Dock: UI Scripts
         self.list_dock = QDockWidget("UI Scripts", self)
         self.list_dock.setMinimumWidth(400)
         self.list_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable)
@@ -178,6 +183,23 @@ class MainInspectorWindow(QMainWindow):
         self.action_exit.triggered.connect(self.close)
         self.menu_file.addAction(self.action_exit)
 
+        # Edit
+        self.menu_item = QMenu("Item")
+        self.menu_bar.addMenu(self.menu_item)
+
+        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Source")
+        self.action_script_src.triggered.connect(self.open_original_code)
+        self.menu_item.addAction(self.action_script_src)
+        self.menu_item.addSeparator()
+
+        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
+        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id, "Group ID"))
+        self.menu_item.addAction(self.action_copy_group_id)
+
+        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
+        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id, "Instance ID"))
+        self.menu_item.addAction(self.action_copy_instance_id)
+
         # Help
         self.menu_help = QMenu("Help")
         self.menu_bar.addMenu(self.menu_help)
@@ -194,6 +216,17 @@ class MainInspectorWindow(QMainWindow):
         self.action_about_app = QAction(QIcon.fromTheme("help-about"), "About S2UI Inspector")
         self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
         self.menu_help.addAction(self.action_about_app)
+
+    def _copy_to_clipboard(self, text: str|int, context: str):
+        """Copy text to the clipboard"""
+        clipboard = QApplication.clipboard()
+        if isinstance(text, int):
+            text = hex(text)
+        if clipboard:
+            clipboard.setText(text)
+            self.status_bar.showMessage(f"{context} {text} copied to clipboard", 2000)
+        else:
+            self.status_bar.showMessage("Unable to copy to clipboard")
 
     def browse(self, open_dir: bool):
         """
@@ -222,8 +255,10 @@ class MainInspectorWindow(QMainWindow):
         """
         Reset the inspector ready to open new files.
         """
-        State.graphics = {}
         self.file_tree.clear()
+        State.graphics = {}
+        State.current_group_id = 0x0
+        State.current_instance_id = 0x0
 
     def discover_files(self, path: str):
         """
@@ -350,6 +385,8 @@ class MainInspectorWindow(QMainWindow):
             return
 
         entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
+        State.current_group_id = entry.group_id
+        State.current_instance_id = entry.instance_id
 
         try:
             html = uiscript_to_html(entry.data.decode("utf-8"))
@@ -382,6 +419,36 @@ class MainInspectorWindow(QMainWindow):
 
                 item.setText(2, max(matches, key=len))
                 item.setToolTip(2, "\n".join(matches))
+
+    def open_original_code(self):
+        """
+        Open the currently opened UI Script file's original code in a pop up window.
+        """
+        entry: dbpf.Entry = self.file_tree.currentItem().data(0, Qt.ItemDataRole.UserRole) # type: ignore
+        if not entry:
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Source Code for Group ID {hex(State.current_group_id)}, Instance ID {hex(State.current_instance_id)}")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        dialog.setLayout(layout)
+
+        code = QTextEdit(dialog)
+        code.setPlainText(entry.data.decode("utf-8"))
+        code.setReadOnly(True)
+        code.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+
+        layout.addWidget(code)
+        layout.addWidget(buttons)
+
+        dialog.setMinimumSize(800, 600)
+        dialog.adjustSize()
+        dialog.exec()
 
 
 if __name__ == "__main__":
