@@ -35,8 +35,10 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDockWidget,
                              QFileDialog, QHBoxLayout, QMainWindow, QMenu,
                              QMenuBar, QMessageBox, QSplitter, QStatusBar,
-                             QTreeWidget, QTreeWidgetItem, QWidget)
+                             QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+                             QWidget)
 
+import s2ui.widgets
 from s2ui.bridge import Bridge, uiscript_to_html
 from s2ui.state import State
 from sims2patcher import dbpf
@@ -71,6 +73,7 @@ class MainInspectorWindow(QMainWindow):
         self.base_widget.setLayout(self.base_layout)
         self.setCentralWidget(self.base_widget)
 
+        # File Tree
         self.file_tree = QTreeWidget(self.base_widget)
         self.file_tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.file_tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
@@ -85,9 +88,17 @@ class MainInspectorWindow(QMainWindow):
         self.list_dock = QDockWidget("UI Scripts", self)
         self.list_dock.setMinimumWidth(400)
         self.list_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable)
-        self.list_dock.setWidget(self.file_tree)
+
+        self.list_dock_widget = QWidget()
+        self.list_dock_layout = QVBoxLayout()
+        self.list_dock_widget.setLayout(self.list_dock_layout)
+        self.file_filter = s2ui.widgets.FilterBox(self.file_tree)
+        self.list_dock_layout.addWidget(self.file_filter)
+        self.list_dock_layout.addWidget(self.file_tree)
+        self.list_dock.setWidget(self.list_dock_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.list_dock)
 
+        # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
         self.status_bar.showMessage("Loading...")
 
