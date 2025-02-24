@@ -92,7 +92,7 @@ class MainInspectorWindow(QMainWindow):
         # Dock: UI Scripts
         self.list_dock = QDockWidget("UI Scripts", self)
         self.list_dock.setMinimumWidth(400)
-        self.list_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable)
+        self.list_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetClosable)
 
         self.list_dock_widget = QWidget()
         self.list_dock_layout = QVBoxLayout()
@@ -165,7 +165,7 @@ class MainInspectorWindow(QMainWindow):
         self.menu_bar = QMenuBar()
         self.setMenuBar(self.menu_bar)
 
-        # File
+        # === File ===
         self.menu_file = QMenu("File")
         self.menu_bar.addMenu(self.menu_file)
 
@@ -179,11 +179,16 @@ class MainInspectorWindow(QMainWindow):
         self.menu_file.addAction(self.action_open_dir)
 
         self.menu_file.addSeparator()
+        self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "Reload Package")
+        self.action_reload.triggered.connect(self.reload_files)
+        self.menu_file.addAction(self.action_reload)
+
+        self.menu_file.addSeparator()
         self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
         self.action_exit.triggered.connect(self.close)
         self.menu_file.addAction(self.action_exit)
 
-        # Edit
+        # === Item ===
         self.menu_item = QMenu("Item")
         self.menu_bar.addMenu(self.menu_item)
 
@@ -200,13 +205,52 @@ class MainInspectorWindow(QMainWindow):
         self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id, "Instance ID"))
         self.menu_item.addAction(self.action_copy_instance_id)
 
-        # Help
+        # === View ===
+        self.menu_view = QMenu("View")
+        self.menu_bar.addMenu(self.menu_view)
+        self._actions = [] # To prevent garbage collection
+
+        for dock in [self.list_dock]:
+            dock_action = QAction(dock.windowTitle())
+            dock_action.setCheckable(True)
+            dock_action.setChecked(True)
+            dock_action.toggled.connect(dock.setVisible)
+            dock.visibilityChanged.connect(dock_action.setChecked)
+            self.menu_view.addAction(dock_action)
+            self._actions.append(dock_action)
+
+        self.menu_view.addSeparator()
+
+        self.action_zoom_in = QAction(QIcon.fromTheme("zoom-in"), "Zoom In")
+        self.action_zoom_in.setShortcut(QKeySequence.StandardKey.ZoomIn)
+        self.action_zoom_in.triggered.connect(lambda: self.webview.setZoomFactor(self.webview.zoomFactor() + 0.1))
+        self.menu_view.addAction(self.action_zoom_in)
+
+        self.action_zoom_out = QAction(QIcon.fromTheme("zoom-out"), "Zoom Out")
+        self.action_zoom_out.setShortcut(QKeySequence.StandardKey.ZoomOut)
+        self.action_zoom_out.triggered.connect(lambda: self.webview.setZoomFactor(self.webview.zoomFactor() - 0.1))
+        self.menu_view.addAction(self.action_zoom_out)
+
+        self.menu_view.addSeparator()
+
+        for index, level in enumerate([50, 100, 150, 200]):
+            zoom_action = QAction(QIcon.fromTheme("zoom"), f"Zoom {level}%")
+            zoom_action.triggered.connect(lambda x, level=level: self.webview.setZoomFactor(level / 100))
+            zoom_action.setShortcut(QKeySequence.fromString(f"Ctrl+{index + 1}"))
+            self.menu_view.addAction(zoom_action)
+            self._actions.append(zoom_action)
+
+        # === Help ===
         self.menu_help = QMenu("Help")
         self.menu_bar.addMenu(self.menu_help)
 
         self.action_online = QAction(QIcon.fromTheme("globe"), "View on GitHub")
         self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
         self.menu_help.addAction(self.action_online)
+
+        self.action_releases = QAction("Check Releases")
+        self.action_releases.triggered.connect(lambda: webbrowser.open(f"{PROJECT_URL}/releases"))
+        self.menu_help.addAction(self.action_releases)
 
         self.menu_help.addSeparator()
         self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About Qt")
@@ -376,6 +420,11 @@ class MainInspectorWindow(QMainWindow):
 
         timer = QTimer(self)
         timer.singleShot(1000, self.preload_files)
+
+    def reload_files(self):
+        """Reload all files again from disk"""
+        self.clear_state()
+        self.load_files()
 
     def inspect_ui_file(self, item: QTreeWidgetItem):
         """
