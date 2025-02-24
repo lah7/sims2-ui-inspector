@@ -134,45 +134,6 @@ class MainInspectorWindow(QMainWindow):
         self.bridge = Bridge()
         self.channel.registerObject("python", self.bridge)
 
-        # Menu bar
-        self.menu_bar = QMenuBar()
-        self.setMenuBar(self.menu_bar)
-
-        # -- File
-        self.menu_file = QMenu("File")
-        self.menu_bar.addMenu(self.menu_file)
-
-        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Package...")
-        self.action_open_pkg.setShortcut(QKeySequence.StandardKey.Open)
-        self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
-        self.menu_file.addAction(self.action_open_pkg)
-
-        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "Open Game Folder...")
-        self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
-        self.menu_file.addAction(self.action_open_dir)
-
-        self.menu_file.addSeparator()
-        self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
-        self.action_exit.triggered.connect(self.close)
-        self.menu_file.addAction(self.action_exit)
-
-        # -- Help
-        self.menu_help = QMenu("Help")
-        self.menu_bar.addMenu(self.menu_help)
-
-        self.action_online = QAction(QIcon.fromTheme("globe"), "View on GitHub")
-        self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
-        self.menu_help.addAction(self.action_online)
-
-        self.menu_help.addSeparator()
-        self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About Qt")
-        self.action_about_qt.triggered.connect(lambda: QMessageBox.aboutQt(self))
-        self.menu_help.addAction(self.action_about_qt)
-
-        self.action_about_app = QAction(QIcon.fromTheme("help-about"), "About S2UI Inspector")
-        self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
-        self.menu_help.addAction(self.action_about_app)
-
         # Window properties
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
@@ -191,6 +152,48 @@ class MainInspectorWindow(QMainWindow):
                 self.load_files()
         else:
             self.browse(open_dir=True)
+
+        self._create_menu_bar()
+
+    def _create_menu_bar(self):
+        """Create the actions for the application's menu bar"""
+        self.menu_bar = QMenuBar()
+        self.setMenuBar(self.menu_bar)
+
+        # File
+        self.menu_file = QMenu("File")
+        self.menu_bar.addMenu(self.menu_file)
+
+        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Package...")
+        self.action_open_pkg.setShortcut(QKeySequence.StandardKey.Open)
+        self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
+        self.menu_file.addAction(self.action_open_pkg)
+
+        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "Open Game Folder...")
+        self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
+        self.menu_file.addAction(self.action_open_dir)
+
+        self.menu_file.addSeparator()
+        self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
+        self.action_exit.triggered.connect(self.close)
+        self.menu_file.addAction(self.action_exit)
+
+        # Help
+        self.menu_help = QMenu("Help")
+        self.menu_bar.addMenu(self.menu_help)
+
+        self.action_online = QAction(QIcon.fromTheme("globe"), "View on GitHub")
+        self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
+        self.menu_help.addAction(self.action_online)
+
+        self.menu_help.addSeparator()
+        self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About Qt")
+        self.action_about_qt.triggered.connect(lambda: QMessageBox.aboutQt(self))
+        self.menu_help.addAction(self.action_about_qt)
+
+        self.action_about_app = QAction(QIcon.fromTheme("help-about"), "About S2UI Inspector")
+        self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
+        self.menu_help.addAction(self.action_about_app)
 
     def browse(self, open_dir: bool):
         """
