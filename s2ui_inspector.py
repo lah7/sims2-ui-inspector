@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import s2ui.widgets
-from s2ui.bridge import Bridge, uiscript_to_html
+from s2ui.bridge import Bridge, get_image_as_png, uiscript_to_html
 from s2ui.state import State
 from sims2patcher import dbpf, uiscript
 

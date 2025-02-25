@@ -58,6 +58,42 @@ def uiscript_to_html(orig: str) -> str:
     return output
 
 
+def get_image_as_png(image_attr: str) -> io.BytesIO|None:
+    """
+    Extract an image from the currently loaded packages ("state").
+    For Qt and WebView compatibility, it will be converted to a PNG.
+
+    Return as an in-memory PNG image file.
+    """
+    try:
+        _group_id, _instance_id = image_attr[1:-1].split(",")
+        group_id = int(_group_id, 16)
+        instance_id = int(_instance_id, 16)
+    except ValueError:
+        print(f"Invalid image group/instance ID: {image_attr}")
+        return None
+
+    try:
+        entry = State.graphics[(group_id, instance_id)]
+    except KeyError:
+        print(f"Image not found: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
+        return None
+
+    # Convert to PNG as browser doesn't support TGA
+    io_out = io.BytesIO()
+    try:
+        io_in = io.BytesIO(entry.data_safe)
+        tga = PIL.Image.open(io_in)
+        tga = tga.convert("RGBA") # Remove transparency
+        tga.save(io_out, format="PNG")
+    except dbpf.errors.QFSError:
+        print(f"Image failed to extract: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
+        return None
+
+    io_out.seek(0)
+    return io_out
+
+
 class Bridge(QObject):
     """Bridge between Python and JavaScript"""
     @pyqtSlot(str, bool, int, int, result=str) # type: ignore
@@ -74,36 +110,15 @@ class Bridge(QObject):
             - is_edge_image: Whether edgeimage="yes" or "blttype="edge" is set
             - height and width of element (for post processing purposes)
         """
-        try:
-            _group_id, _instance_id = image_attr[1:-1].split(",")
-            group_id = int(_group_id, 16)
-            instance_id = int(_instance_id, 16)
-        except ValueError:
-            print(f"Invalid image group/instance ID: {image_attr}")
+        image = get_image_as_png(image_attr)
+        if image is None:
             return ""
 
-        try:
-            entry = State.graphics[(group_id, instance_id)]
-        except KeyError:
-            print(f"Image not found: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
-            return ""
-
-        # Convert to PNG as browser doesn't support TGA
-        io_out = io.BytesIO()
-        try:
-            io_in = io.BytesIO(entry.data_safe)
-            tga = PIL.Image.open(io_in)
-            tga = tga.convert("RGBA") # Remove transparency
-            tga.save(io_out, format="PNG")
-        except dbpf.errors.QFSError:
-            print(f"Image failed to extract: Group ID {hex(group_id)}, Instance ID {hex(instance_id)}")
-            return ""
-
-        # Post processing required?
+        # Perform post processing if necessary
         if is_edge_image:
-            io_out = self._render_dialog_image(io_out, height, width)
+            image = self._render_dialog_image(image, height, width)
 
-        return base64.b64encode(io_out.getvalue()).decode("utf-8")
+        return base64.b64encode(image.getvalue()).decode("utf-8")
 
     def _render_dialog_image(self, data_io: io.BytesIO, height: int, width: int) -> io.BytesIO:
         """
