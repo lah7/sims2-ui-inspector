@@ -19,7 +19,34 @@ Module for Qt widgets used in the UI.
 #
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLineEdit, QTreeWidget, QTreeWidgetItem
+from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
+                             QMainWindow, QTreeWidget, QTreeWidgetItem,
+                             QVBoxLayout, QWidget)
+
+
+class DockTree(QDockWidget):
+    """A dock widget with a title and a tree widget."""
+    def __init__(self, parent: QMainWindow, title: str, min_width: int, position: Qt.DockWidgetArea):
+        super().__init__(title, parent)
+
+        # Dock properties
+        self.setMinimumWidth(min_width)
+        self.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetClosable)
+
+        # Dock widget/layout
+        self.base_widget = QWidget()
+        self.base_layout = QVBoxLayout()
+        self.base_widget.setLayout(self.base_layout)
+        self.setWidget(self.base_widget)
+        parent.addDockWidget(position, self)
+
+        # Widgets
+        self.tree = QTreeWidget()
+        self.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+        self.filter = FilterBox(self.tree)
+
+        self.base_layout.addWidget(self.filter)
+        self.base_layout.addWidget(self.tree)
 
 
 class FilterBox(QLineEdit):

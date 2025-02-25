@@ -33,16 +33,15 @@ from PyQt6.QtGui import QAction, QCursor, QFontDatabase, QIcon, QKeySequence
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
-                             QDialogButtonBox, QDockWidget, QFileDialog,
-                             QHBoxLayout, QMainWindow, QMenu, QMenuBar,
-                             QMessageBox, QSplitter, QStatusBar, QTextEdit,
-                             QTreeWidget, QTreeWidgetItem, QVBoxLayout,
-                             QWidget)
+                             QDialogButtonBox, QFileDialog, QHBoxLayout,
+                             QMainWindow, QMenu, QMenuBar, QMessageBox,
+                             QSplitter, QStatusBar, QTextEdit, QTreeWidget,
+                             QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import s2ui.widgets
 from s2ui.bridge import Bridge, uiscript_to_html
 from s2ui.state import State
-from sims2patcher import dbpf
+from sims2patcher import dbpf, uiscript
 
 PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
 VERSION = "0.1.0"
@@ -74,34 +73,36 @@ class MainInspectorWindow(QMainWindow):
         self.base_widget.setLayout(self.base_layout)
         self.setCentralWidget(self.base_widget)
 
-        # File Tree for UI Scripts
-        self.file_tree = QTreeWidget(self.base_widget)
-        self.file_tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
-        self.file_tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
-        self.file_tree.setColumnWidth(0, 120)
-        self.file_tree.setColumnWidth(1, 100)
-        self.file_tree.setColumnWidth(2, 150)
-        self.file_tree.setColumnWidth(3, 130)
-        self.file_tree.setColumnWidth(4, 100)
-        self.file_tree.setSortingEnabled(True)
-        self.file_tree.currentItemChanged.connect(self.inspect_ui_file)
-
-        self.file_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.file_tree.customContextMenuRequested.connect(lambda: self.menu_item.exec(QCursor.pos()))
-
         # Dock: UI Scripts
-        self.list_dock = QDockWidget("UI Scripts", self)
-        self.list_dock.setMinimumWidth(400)
-        self.list_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetFloatable | QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
+        self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+        self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
+        self.uiscript_dock.tree.setColumnWidth(0, 120)
+        self.uiscript_dock.tree.setColumnWidth(1, 100)
+        self.uiscript_dock.tree.setColumnWidth(2, 150)
+        self.uiscript_dock.tree.setColumnWidth(3, 130)
+        self.uiscript_dock.tree.setColumnWidth(4, 100)
+        self.uiscript_dock.tree.setSortingEnabled(True)
+        self.uiscript_dock.tree.currentItemChanged.connect(self.inspect_ui_file)
+        self.uiscript_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_item.exec(QCursor.pos()))
 
-        self.list_dock_widget = QWidget()
-        self.list_dock_layout = QVBoxLayout()
-        self.list_dock_widget.setLayout(self.list_dock_layout)
-        self.file_filter = s2ui.widgets.FilterBox(self.file_tree)
-        self.list_dock_layout.addWidget(self.file_filter)
-        self.list_dock_layout.addWidget(self.file_tree)
-        self.list_dock.setWidget(self.list_dock_widget)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.list_dock)
+        # Dock: Attributes
+        self.attributes_dock = s2ui.widgets.DockTree(self, "Attributes", 400, Qt.DockWidgetArea.RightDockWidgetArea)
+        self.attributes_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
+        self.attributes_dock.tree.setColumnWidth(0, 225)
+        self.attributes_dock.tree.setColumnWidth(3, 100)
+
+        # Dock: Properties
+        self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
+        self.properties_dock.tree.setHeaderLabels(["Attribute", "Value"])
+        self.properties_dock.tree.setColumnWidth(0, 200)
+        self.properties_dock.tree.setSortingEnabled(True)
+        self.properties_dock.tree.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        self.attributes_dock.tree.currentItemChanged.connect(self.inspect_element)
+
+        # Allow drag-and-dropping docks into each other
+        self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
@@ -125,6 +126,7 @@ class MainInspectorWindow(QMainWindow):
         self.setWindowIcon(QIcon(os.path.abspath(get_resource("icon.ico"))))
         self.show()
         self.status_bar.showMessage("Ready")
+        QApplication.processEvents()
 
         # Auto load file/folder when passed as a command line argument
         if len(sys.argv) > 1:
@@ -190,11 +192,11 @@ class MainInspectorWindow(QMainWindow):
         self.menu_bar.addMenu(self.menu_view)
         self._actions = [] # To prevent garbage collection
 
-        for dock in [self.list_dock]:
+        for dock in [self.uiscript_dock, self.attributes_dock, self.properties_dock]:
             dock_action = QAction(dock.windowTitle())
             dock_action.setCheckable(True)
-            dock_action.setChecked(True)
-            dock_action.toggled.connect(dock.setVisible)
+            dock_action.setChecked(dock.isVisible())
+            dock_action.triggered.connect(lambda checked, dock=dock: dock.setVisible(checked))
             dock.visibilityChanged.connect(dock_action.setChecked)
             self.menu_view.addAction(dock_action)
             self._actions.append(dock_action)
@@ -286,7 +288,7 @@ class MainInspectorWindow(QMainWindow):
         """
         Reset the inspector ready to open new files.
         """
-        self.file_tree.clear()
+        self.uiscript_dock.tree.clear()
         State.graphics = {}
         State.current_group_id = 0x0
         State.current_instance_id = 0x0
@@ -359,13 +361,13 @@ class MainInspectorWindow(QMainWindow):
             if identical:
                 game_names = ", ".join([entry_to_game[entry] for entry in entries])
                 entry = entries[0]
-                item = QTreeWidgetItem(self.file_tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
+                item = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
                 item.setData(0, Qt.ItemDataRole.UserRole, entry)
                 self.items.append(item)
 
             # Display a tree item for each unique instance of the UI script
             else:
-                parent = QTreeWidgetItem(self.file_tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, f"{len(entries)} games"])
+                parent = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, f"{len(entries)} games"])
                 parent.setData(0, Qt.ItemDataRole.UserRole, entries[0])
                 self.items.append(parent)
                 _md5_to_item: dict[str, QTreeWidgetItem] = {}
@@ -415,7 +417,7 @@ class MainInspectorWindow(QMainWindow):
 
     def inspect_ui_file(self, item: QTreeWidgetItem):
         """
-        Open the selected .uiScript file in the web view.
+        Change the currently selected .uiScript file for viewing/rendering.
         """
         if not item:
             return
@@ -424,13 +426,63 @@ class MainInspectorWindow(QMainWindow):
         State.current_group_id = entry.group_id
         State.current_instance_id = entry.instance_id
 
+        self.attributes_dock.tree.clear()
+        self.properties_dock.tree.clear()
+
+        # Render the UI (XML-like -> HTML)
         try:
             html = uiscript_to_html(entry.data.decode("utf-8"))
         except UnicodeDecodeError:
-            html = "Unable to decode. It may be binary data."
+            self.webview.setHtml("")
+            return QMessageBox.critical(self, "Cannot read file", "This file is not a valid .uiScript file.", QMessageBox.StandardButton.Ok)
+
         with open(get_resource("inspector.html"), "r", encoding="utf-8") as f:
             html = f.read().replace("PLACEHOLDER", html)
         self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(get_resource("")))
+
+        # Update the attributes and properties dock
+        data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
+
+        def _process_element(element: uiscript.UIScriptElement, parent: QTreeWidget|QTreeWidgetItem):
+            iid = element.attributes.get("iid", "Unknown")
+            caption = element.attributes.get("caption", "")
+            element_id = element.attributes.get("id", "")
+            xpos, ypos, width, height = element.attributes.get("area", "(0,0,0,0)").strip("()").split(",")
+
+            item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
+            item.setData(0, Qt.ItemDataRole.UserRole, element)
+            item.setToolTip(1, caption)
+            item.setToolTip(2, element_id)
+            item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
+
+            for child in element.children:
+                _process_element(child, item)
+
+            return item
+
+        for element in data.children:
+            _process_element(element, self.attributes_dock.tree)
+
+        self.attributes_dock.tree.expandAll()
+        self.attributes_dock.tree.resizeColumnToContents(3)
+
+        first_item = self.attributes_dock.tree.topLevelItem(0)
+        if first_item:
+            self.attributes_dock.tree.setCurrentItem(first_item)
+
+    def inspect_element(self, item: QTreeWidgetItem):
+        """
+        Display the properties of the selected element.
+        """
+        if not item:
+            return
+
+        element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
+        self.properties_dock.tree.clear()
+
+        for key, value in element.attributes.items():
+            prop = QTreeWidgetItem(self.properties_dock.tree, [key, value])
+            prop.setToolTip(1, value)
 
     def preload_files(self):
         """
@@ -460,7 +512,7 @@ class MainInspectorWindow(QMainWindow):
         """
         Open the currently opened UI Script file's original code in a pop up window.
         """
-        entry: dbpf.Entry = self.file_tree.currentItem().data(0, Qt.ItemDataRole.UserRole) # type: ignore
+        entry: dbpf.Entry = self.uiscript_tree.currentItem().data(0, Qt.ItemDataRole.UserRole) # type: ignore
         if not entry:
             return
 
