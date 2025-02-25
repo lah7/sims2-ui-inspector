@@ -42,7 +42,7 @@ class FilterBox(QLineEdit):
             if criteria == "":
                 item.setHidden(False)
                 for c in range(0, item.columnCount()):
-                    item.setBackground(c, Qt.GlobalColor.transparent)
+                    item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
                 continue
 
             criteria = criteria.lower()
@@ -52,6 +52,6 @@ class FilterBox(QLineEdit):
                     matches = True
                     item.setBackground(c, Qt.GlobalColor.darkGreen)
                 else:
-                    item.setBackground(c, Qt.GlobalColor.transparent)
+                    item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
 
             item.setHidden(not matches)
