@@ -29,7 +29,8 @@ import sys
 import webbrowser
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QAction, QCursor, QFontDatabase, QIcon, QKeySequence
+from PyQt6.QtGui import (QAction, QCursor, QFontDatabase, QIcon, QImage,
+                         QKeySequence, QPainter, QPixmap)
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
@@ -448,12 +449,39 @@ class MainInspectorWindow(QMainWindow):
             caption = element.attributes.get("caption", "")
             element_id = element.attributes.get("id", "")
             xpos, ypos, width, height = element.attributes.get("area", "(0,0,0,0)").strip("()").split(",")
+            image_attr = element.attributes.get("image", "")
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
             item.setToolTip(1, caption)
             item.setToolTip(2, element_id)
             item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
+
+            if image_attr:
+                png = get_image_as_png(image_attr)
+                if png is None:
+                    pixmap = QPixmap(16, 16)
+                    pixmap.fill(Qt.GlobalColor.red)
+                else:
+                    png_data = png.getvalue()
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(png_data)
+
+                    # For buttons, crop to the second 1/4 (normal state)
+                    if iid == "IGZWinBtn":
+                        quarter = pixmap.width() // 4
+                        pixmap = QPixmap.fromImage(QImage.fromData(png_data).copy(quarter, 0, quarter, pixmap.height()))
+
+                # Scale to square aspect ratio (16x16) for uniformity
+                scaled_pixmap = pixmap.scaled(16, 16, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                square_pixmap = QPixmap(16, 16)
+                square_pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(square_pixmap)
+                x = (16 - scaled_pixmap.width()) // 2
+                y = (16 - scaled_pixmap.height()) // 2
+                painter.drawPixmap(x, y, scaled_pixmap)
+                painter.end()
+                item.setIcon(0, QIcon(square_pixmap))
 
             for child in element.children:
                 _process_element(child, item)
