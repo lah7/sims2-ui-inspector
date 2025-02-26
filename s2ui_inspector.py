@@ -29,8 +29,8 @@ import sys
 import webbrowser
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import (QAction, QCursor, QFontDatabase, QIcon, QImage,
-                         QKeySequence, QPainter, QPixmap)
+from PyQt6.QtGui import (QAction, QColor, QCursor, QFontDatabase, QIcon,
+                         QImage, QKeySequence, QPainter, QPixmap)
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
@@ -517,6 +517,29 @@ class MainInspectorWindow(QMainWindow):
         for key, value in element.attributes.items():
             prop = QTreeWidgetItem(self.properties_dock.tree, [key, value])
             prop.setToolTip(1, value)
+
+            # Expanded attributes
+            match key:
+                case "area":
+                    x, y, width, height = value[1:-1].split(",")
+                    for name, value in [("X", x), ("Y", y), ("Width", width), ("Height", height)]:
+                        QTreeWidgetItem(prop, [name, value])
+                case "image":
+                    image_attr = element.attributes.get("image", "")
+                    if image_attr:
+                        _group_id, _instance_id = image_attr[1:-1].split(",")
+                        group_id = int(_group_id, 16)
+                        instance_id = int(_instance_id, 16)
+                        QTreeWidgetItem(prop, ["Group ID", hex(group_id)])
+                        QTreeWidgetItem(prop, ["Instance ID", hex(instance_id)])
+
+            if key.find("color") != -1 and len(value.split(",")) == 3: # (R, G, B)
+                _color = value[1:-1].split(",")
+                pixmap = QPixmap(16, 16)
+                pixmap.fill(QColor.fromRgb(int(_color[0]), int(_color[1]), int(_color[2])))
+                prop.setIcon(1, QIcon(pixmap))
+
+            prop.setExpanded(True)
 
         if self.properties_dock.filter.is_filtered():
             self.properties_dock.filter.refresh_tree()
