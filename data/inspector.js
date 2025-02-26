@@ -21,15 +21,11 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
     python = channel.objects.python;
 });
 
-window.onload = function() {
-    // Wait for QWebChannel to be ready
-    if (typeof python === "undefined") {
-        setTimeout(window.onload, 100);
-        return;
-    }
-
-    // Render each element roughly based on the UI script.
+function _initialRender() {
+    //
+    // Render each element roughly based on the UI script (XML-like) using HTML.
     // Many attributes origin from older Maxis games and may not be used.
+    //
     const style = document.createElement("style");
     document.head.appendChild(style);
 
@@ -131,5 +127,15 @@ window.onload = function() {
             parent.appendChild(childElement.children[0]);
         }
         childElement.remove();
-    };
-};
+    }
+}
+
+window.onload = function() {
+    // Wait for QWebChannel to be ready
+    if (typeof python === "undefined") {
+        setTimeout(window.onload, 100);
+        return;
+    }
+
+    _initialRender();
+}
