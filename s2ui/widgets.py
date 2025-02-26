@@ -121,3 +121,15 @@ class FilterBox(QLineEdit):
 
         for item in self._get_all_children(self.tree_widget.invisibleRootItem()): # type: ignore
             self._update_item(item, criteria)
+
+    def refresh_tree(self):
+        """
+        Refresh the filtered tree widget when the tree changes.
+        """
+        self.update_tree(self.text())
+
+    def is_filtered(self) -> bool:
+        """
+        Check if the tree is currently filtered.
+        """
+        return bool(self.text())

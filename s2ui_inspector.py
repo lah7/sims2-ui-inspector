@@ -408,6 +408,9 @@ class MainInspectorWindow(QMainWindow):
         self.status_bar.showMessage(f"Found {total} UI scripts", 3000)
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
+        if self.uiscript_dock.filter.is_filtered():
+            self.uiscript_dock.filter.refresh_tree()
+
         timer = QTimer(self)
         timer.singleShot(1000, self.preload_files)
 
@@ -494,6 +497,9 @@ class MainInspectorWindow(QMainWindow):
         self.attributes_dock.tree.expandAll()
         self.attributes_dock.tree.resizeColumnToContents(3)
 
+        if self.attributes_dock.filter.is_filtered():
+            self.attributes_dock.filter.refresh_tree()
+
         first_item = self.attributes_dock.tree.topLevelItem(0)
         if first_item:
             self.attributes_dock.tree.setCurrentItem(first_item)
@@ -511,6 +517,9 @@ class MainInspectorWindow(QMainWindow):
         for key, value in element.attributes.items():
             prop = QTreeWidgetItem(self.properties_dock.tree, [key, value])
             prop.setToolTip(1, value)
+
+        if self.properties_dock.filter.is_filtered():
+            self.properties_dock.filter.refresh_tree()
 
     def preload_files(self):
         """
