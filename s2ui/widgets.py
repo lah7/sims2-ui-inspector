@@ -71,17 +71,19 @@ class FilterBox(QLineEdit):
         children = []
         for i in range(item.childCount()):
             child = item.child(i)
-            if not item:
-                continue
-            children.append(child)
-            children += self._get_all_children(child) # type: ignore
+            if child:
+                children.append(child)
+                children += self._get_all_children(child)
         return children
 
     def _reset_tree(self):
         """
         Loop through all items in the tree and show them.
         """
-        for item in self._get_all_children(self.tree_widget.invisibleRootItem()): # type: ignore
+        root = self.tree_widget.invisibleRootItem()
+        if not root:
+            return
+        for item in self._get_all_children(root):
             item.setHidden(False)
             for col in range(0, item.columnCount()):
                 item.setData(col, Qt.ItemDataRole.BackgroundRole, None)
@@ -119,7 +121,10 @@ class FilterBox(QLineEdit):
             self._reset_tree()
             return
 
-        for item in self._get_all_children(self.tree_widget.invisibleRootItem()): # type: ignore
+        root = self.tree_widget.invisibleRootItem()
+        if not root:
+            return
+        for item in self._get_all_children(root):
             self._update_item(item, criteria)
 
     def refresh_tree(self):

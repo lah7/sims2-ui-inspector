@@ -549,7 +549,11 @@ class MainInspectorWindow(QMainWindow):
         """
         Open the currently opened UI Script file's original code in a pop up window.
         """
-        entry: dbpf.Entry = self.uiscript_tree.currentItem().data(0, Qt.ItemDataRole.UserRole) # type: ignore
+        item: QTreeWidgetItem|None = self.uiscript_dock.tree.currentItem()
+        if not item:
+            return
+
+        entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
         if not entry:
             return
 
@@ -594,7 +598,9 @@ class MainInspectorWindow(QMainWindow):
         self.inspector = QWebEngineView(self._inspector)
         self._inspector_layout.addWidget(self.inspector)
         self.inspector.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
-        self.inspector.page().setInspectedPage(self.webview.page()) # type: ignore
+        inspector_page = self.inspector.page()
+        if inspector_page:
+            inspector_page.setInspectedPage(self.webview.page())
 
         self.web_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.web_splitter.addWidget(self._webview)
