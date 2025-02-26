@@ -32,6 +32,7 @@ from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import (QAction, QColor, QCursor, QFontDatabase, QIcon,
                          QImage, QKeySequence, QPainter, QPixmap)
 from PyQt6.QtWebChannel import QWebChannel
+from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QDialogButtonBox, QFileDialog, QHBoxLayout,
@@ -113,11 +114,12 @@ class MainInspectorWindow(QMainWindow):
         self.webview = QWebEngineView()
         self.webview.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webview.setHtml("<style>body { background: #003062; }</style>")
+        self.webview_page = self.webview.page() or QWebEnginePage() # 'Or' to satisfy strong type checking
         self.base_layout.addWidget(self.webview)
 
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
-        self.webview.page().setWebChannel(self.channel) # type: ignore
+        self.webview_page.setWebChannel(self.channel)
         self.bridge = Bridge()
         self.channel.registerObject("python", self.bridge)
 
@@ -623,7 +625,7 @@ class MainInspectorWindow(QMainWindow):
         self.inspector.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         inspector_page = self.inspector.page()
         if inspector_page:
-            inspector_page.setInspectedPage(self.webview.page())
+            inspector_page.setInspectedPage(self.webview_page)
 
         self.web_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.web_splitter.addWidget(self._webview)
