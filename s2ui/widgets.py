@@ -50,7 +50,9 @@ class DockTree(QDockWidget):
 
 
 class FilterBox(QLineEdit):
-    """A text box to quickly filter a tree in a dock widget"""
+    """
+    A text box to quickly filter a tree in a dock widget.
+    """
     def __init__(self, tree: QTreeWidget):
         super().__init__()
         self.tree_widget = tree
@@ -59,26 +61,63 @@ class FilterBox(QLineEdit):
         self.setClearButtonEnabled(True)
         self.textChanged.connect(self.update_tree)
 
-    def update_tree(self, criteria: str):
-        """Filter the UI scripts by group ID or caption."""
-        for i in range(self.tree_widget.topLevelItemCount()):
-            item: QTreeWidgetItem = self.tree_widget.topLevelItem(i) # type: ignore
+    def _get_all_children(self, item: QTreeWidgetItem) -> list[QTreeWidgetItem]:
+        """
+        Get all children of an item recursively.
+        """
+        if not item:
+            return []
+
+        children = []
+        for i in range(item.childCount()):
+            child = item.child(i)
             if not item:
                 continue
+            children.append(child)
+            children += self._get_all_children(child) # type: ignore
+        return children
 
-            if criteria == "":
-                item.setHidden(False)
-                for c in range(0, item.columnCount()):
-                    item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
-                continue
+    def _reset_tree(self):
+        """
+        Loop through all items in the tree and show them.
+        """
+        for item in self._get_all_children(self.tree_widget.invisibleRootItem()): # type: ignore
+            item.setHidden(False)
+            for col in range(0, item.columnCount()):
+                item.setData(col, Qt.ItemDataRole.BackgroundRole, None)
 
-            criteria = criteria.lower()
-            matches = False
-            for c in range(0, item.columnCount()):
-                if criteria in item.text(c).lower() or criteria in item.toolTip(c).lower():
-                    matches = True
-                    item.setBackground(c, Qt.GlobalColor.darkGreen)
-                else:
-                    item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
+    def _update_item(self, item: QTreeWidgetItem, criteria: str):
+        """
+        Update the item's visibility based on the criteria.
+        Always show the parent(s) if a child matches.
+        """
+        if not item:
+            return
 
-            item.setHidden(not matches)
+        criteria = criteria.lower()
+        matches = False
+        for col in range(0, item.columnCount()):
+            if criteria in item.text(col).lower() or criteria in item.toolTip(col).lower():
+                matches = True
+                item.setBackground(col, Qt.GlobalColor.darkGreen)
+            else:
+                item.setData(col, Qt.ItemDataRole.BackgroundRole, None)
+
+        item.setHidden(not matches)
+
+        if matches:
+            parent = item.parent()
+            while parent:
+                parent.setHidden(False)
+                parent = parent.parent()
+
+    def update_tree(self, criteria: str):
+        """
+        Filter the UI scripts by group ID or caption.
+        """
+        if not criteria:
+            self._reset_tree()
+            return
+
+        for item in self._get_all_children(self.tree_widget.invisibleRootItem()): # type: ignore
+            self._update_item(item, criteria)
