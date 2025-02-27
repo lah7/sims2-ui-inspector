@@ -89,11 +89,11 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_item.exec(QCursor.pos()))
 
-        # Dock: Attributes
-        self.attributes_dock = s2ui.widgets.DockTree(self, "Attributes", 400, Qt.DockWidgetArea.RightDockWidgetArea)
-        self.attributes_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
-        self.attributes_dock.tree.setColumnWidth(0, 225)
-        self.attributes_dock.tree.setColumnWidth(3, 100)
+        # Dock: Elements
+        self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
+        self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
+        self.elements_dock.tree.setColumnWidth(0, 225)
+        self.elements_dock.tree.setColumnWidth(3, 100)
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
@@ -101,7 +101,7 @@ class MainInspectorWindow(QMainWindow):
         self.properties_dock.tree.setColumnWidth(0, 200)
         self.properties_dock.tree.setSortingEnabled(True)
         self.properties_dock.tree.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.attributes_dock.tree.currentItemChanged.connect(self.inspect_element)
+        self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
 
         # Allow drag-and-dropping docks into each other
         self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
@@ -195,7 +195,7 @@ class MainInspectorWindow(QMainWindow):
         self.menu_bar.addMenu(self.menu_view)
         self._actions = [] # To prevent garbage collection
 
-        for dock in [self.uiscript_dock, self.attributes_dock, self.properties_dock]:
+        for dock in [self.uiscript_dock, self.elements_dock, self.properties_dock]:
             dock_action = QAction(dock.windowTitle())
             dock_action.setCheckable(True)
             dock_action.setChecked(dock.isVisible())
@@ -432,7 +432,7 @@ class MainInspectorWindow(QMainWindow):
         State.current_group_id = entry.group_id
         State.current_instance_id = entry.instance_id
 
-        self.attributes_dock.tree.clear()
+        self.elements_dock.tree.clear()
         self.properties_dock.tree.clear()
 
         # Render the UI (XML-like -> HTML)
@@ -446,7 +446,7 @@ class MainInspectorWindow(QMainWindow):
             html = f.read().replace("PLACEHOLDER", html)
         self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(get_resource("")))
 
-        # Update the attributes and properties dock
+        # Update the elements and properties dock
         data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
 
         def _process_element(element: uiscript.UIScriptElement, parent: QTreeWidget|QTreeWidgetItem):
@@ -494,17 +494,17 @@ class MainInspectorWindow(QMainWindow):
             return item
 
         for element in data.children:
-            _process_element(element, self.attributes_dock.tree)
+            _process_element(element, self.elements_dock.tree)
 
-        self.attributes_dock.tree.expandAll()
-        self.attributes_dock.tree.resizeColumnToContents(3)
+        self.elements_dock.tree.expandAll()
+        self.elements_dock.tree.resizeColumnToContents(3)
 
-        if self.attributes_dock.filter.is_filtered():
-            self.attributes_dock.filter.refresh_tree()
+        if self.elements_dock.filter.is_filtered():
+            self.elements_dock.filter.refresh_tree()
 
-        first_item = self.attributes_dock.tree.topLevelItem(0)
+        first_item = self.elements_dock.tree.topLevelItem(0)
         if first_item:
-            self.attributes_dock.tree.setCurrentItem(first_item)
+            self.elements_dock.tree.setCurrentItem(first_item)
 
     def inspect_element(self, item: QTreeWidgetItem):
         """
