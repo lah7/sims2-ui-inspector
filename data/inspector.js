@@ -93,6 +93,16 @@ function _initialRender() {
             element.style.textAlign = align;
         }
 
+        // Input
+        if (iid === "IGZWinTextEdit") {
+            const input = document.createElement("textarea");
+            input.type = "text";
+            input.style.resize = "none";
+            input.value = element.getAttribute("caption");
+            element.style.display = "flex";
+            element.appendChild(input);
+        }
+
         // Tooltip
         if (tips)
             element.setAttribute("title", element.getAttribute("tiptext"));

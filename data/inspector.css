@@ -40,3 +40,14 @@ html, body {
     75% {background-position: 100%; }
     100% {background-position: 0%; }
 }
+
+/* Input fields */
+.GZWinTextEdit > textarea {
+    appearance: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    flex: 1;
+    font-family: inherit;
+    overflow: hidden;
+}
