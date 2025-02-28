@@ -102,6 +102,8 @@ class MainInspectorWindow(QMainWindow):
         self.properties_dock.tree.setSortingEnabled(True)
         self.properties_dock.tree.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
+        self.elements_dock.tree.setMouseTracking(True)
+        self.elements_dock.tree.itemEntered.connect(self.hover_element)
 
         # Allow drag-and-dropping docks into each other
         self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
@@ -120,7 +122,7 @@ class MainInspectorWindow(QMainWindow):
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
         self.webview_page.setWebChannel(self.channel)
-        self.bridge = Bridge()
+        self.bridge = Bridge(self.elements_dock.tree)
         self.channel.registerObject("python", self.bridge)
 
         # Window properties
@@ -421,6 +423,17 @@ class MainInspectorWindow(QMainWindow):
         self.clear_state()
         self.load_files()
 
+    def _get_s2ui_element_id(self, element: uiscript.UIScriptElement) -> str:
+        """
+        Generate a unique ID for selecting this element internally between HTML/JS and PyQt.
+        """
+        parts = []
+        for key, value in element.attributes.items():
+            parts.append(key)
+            parts.append(value)
+        digest = hashlib.md5("".join(parts).encode("utf-8")).hexdigest()
+        return f"s2ui_{digest}"
+
     def _uiscript_to_html(self, root: uiscript.UIScriptRoot) -> str:
         """
         Render UI Script files into HTML for the webview.
@@ -432,10 +445,8 @@ class MainInspectorWindow(QMainWindow):
                 if not key == "id":
                     parts.append(f"{key}=\"{value}\"")
 
-            # Generate a unique ID for selecting this element later
-            uid = hashlib.md5("".join(parts).encode("utf-8")).hexdigest()
-            parts.append(f"id=\"s2ui_{uid}\"")
-
+            s2ui_element_id = self._get_s2ui_element_id(element)
+            parts.append(f"id=\"{s2ui_element_id}\"")
             parts.append(">")
             for child in element.children:
                 parts.append(_process_line(child))
@@ -484,6 +495,7 @@ class MainInspectorWindow(QMainWindow):
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
+            item.setData(1, Qt.ItemDataRole.UserRole, self._get_s2ui_element_id(element))
             item.setToolTip(1, caption)
             item.setToolTip(2, element_id)
             item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
@@ -532,6 +544,16 @@ class MainInspectorWindow(QMainWindow):
         if first_item:
             self.elements_dock.tree.setCurrentItem(first_item)
 
+    def hover_element(self, item: QTreeWidgetItem):
+        """
+        Highlight the hovered element in the webview.
+        """
+        if not item:
+            return
+
+        element_id: str = item.data(1, Qt.ItemDataRole.UserRole)
+        self.webview_page.runJavaScript(f"hoverElement('{element_id}')")
+
     def inspect_element(self, item: QTreeWidgetItem):
         """
         Display the properties of the selected element.
@@ -540,6 +562,9 @@ class MainInspectorWindow(QMainWindow):
             return
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
+        element_id: str = item.data(1, Qt.ItemDataRole.UserRole)
+        self.webview_page.runJavaScript(f"selectElement('{element_id}')")
+
         self.properties_dock.tree.clear()
 
         for key, value in element.attributes.items():

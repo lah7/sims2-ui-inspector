@@ -133,6 +133,56 @@ function _initialRender() {
     });
 }
 
+function _registerMouseEvents() {
+    //
+    // Handle events when hovering or clicking an element.
+    // This ensures only the topmost element is highlighted based on current mouse position.
+    //
+    document.addEventListener("click", function(event) {
+        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY"));
+        if (elements.length > 0) {
+            event.stopPropagation();
+            python.select_element(elements[0].getAttribute("id"));
+        }
+    });
+
+    document.addEventListener("mousemove", function(event) {
+        document.querySelectorAll(".hover").forEach((element) => {
+            element.classList.remove("hover");
+        });
+        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY"));
+        if (elements.length > 0) {
+            event.stopPropagation();
+            elements[0].classList.add("hover");
+            python.hover_element(elements[0].getAttribute("id"));
+        }
+    });
+}
+
+function selectElement(id) {
+    //
+    // Highlight the currently selected item from elements tree.
+    //
+    document.querySelectorAll(".LEGACY").forEach((element) => {
+        element.classList.remove("selected");
+        if (element.getAttribute("id") === id) {
+            element.classList.add("selected");
+        }
+    });
+}
+
+function hoverElement(id) {
+    //
+    // Highlight the currently hovered item from elements tree.
+    //
+    document.querySelectorAll(".LEGACY").forEach((element) => {
+        element.classList.remove("hover");
+        if (element.getAttribute("id") === id) {
+            element.classList.add("hover");
+        }
+    });
+}
+
 window.onload = function() {
     // Wait for QWebChannel to be ready
     if (typeof python === "undefined") {
@@ -141,4 +191,5 @@ window.onload = function() {
     }
 
     _initialRender();
+    _registerMouseEvents();
 }

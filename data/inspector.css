@@ -5,17 +5,16 @@ html, body {
     font-size: 13px;
 }
 
-/* Hover any element */
-.LEGACY:hover {
+/* Highlight hovered / currently selected element */
+.hover {
     outline: 1px solid #800000;
 }
 
-.LEGACY:hover > .LEGACY:hover {
+.selected {
     outline: 1px solid #FF0000;
 }
 
-
-/* Highlight potentially missing graphics */
+/* Highlight missing graphics */
 .missing {
     animation: missing 1s ease-in-out infinite forwards;
 }

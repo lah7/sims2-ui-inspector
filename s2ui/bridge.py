@@ -23,7 +23,8 @@ import base64
 import io
 
 import PIL.Image
-from PyQt6.QtCore import QObject, pyqtSlot
+from PyQt6.QtCore import QObject, Qt, pyqtSlot
+from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItemIterator
 
 from s2ui.state import State
 from sims2patcher import dbpf
@@ -66,7 +67,13 @@ def get_image_as_png(image_attr: str) -> io.BytesIO|None:
 
 
 class Bridge(QObject):
-    """Bridge between Python and JavaScript"""
+    """
+    Bridge between Python and JavaScript.
+    """
+    def __init__(self, element_tree: QTreeWidget) -> None:
+        super().__init__()
+        self.element_tree = element_tree
+
     @pyqtSlot(str, bool, int, int, result=str) # type: ignore
     def get_image(self, image_attr: str, is_edge_image: bool, height: int, width: int) -> str:
         """
@@ -131,3 +138,42 @@ class Bridge(QObject):
         output = io.BytesIO()
         canvas.save(output, format="PNG")
         return output
+
+    @pyqtSlot(str)
+    def select_element(self, element_id: str):
+        """
+        User clicked on an element in webview. Highlight new element in the tree.
+        """
+        iterator = QTreeWidgetItemIterator(self.element_tree)
+        while iterator.value():
+            item = iterator.value()
+            if not item:
+                return
+
+            if item.data(1, Qt.ItemDataRole.UserRole) == element_id:
+                self.element_tree.setCurrentItem(item)
+                self.element_tree.scrollToItem(item)
+                break
+
+            iterator += 1
+
+    @pyqtSlot(str)
+    def hover_element(self, element_id: str):
+        """
+        User hovered over an element in webview. Highlight this element in the tree.
+        """
+        iterator = QTreeWidgetItemIterator(self.element_tree)
+        while iterator.value():
+            item = iterator.value()
+            if not item:
+                return
+
+            if item.data(1, Qt.ItemDataRole.UserRole) == element_id:
+                for c in range(item.columnCount()):
+                    item.setBackground(c, Qt.GlobalColor.darkGray)
+            else:
+                # Reset background colour
+                for c in range(item.columnCount()):
+                    item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
+
+            iterator += 1
