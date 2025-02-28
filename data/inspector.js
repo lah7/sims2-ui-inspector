@@ -68,25 +68,36 @@ function _initialRender() {
         // Apply layout
         element.classList.add(element.getAttribute("clsid"));
 
-        /* Area */
+        // Area
         element.style.position = "absolute";
         element.style.top = `${area.y}px`;
         element.style.left = `${area.x}px`;
         element.style.height = `${area.height}px`;
         element.style.width = `${area.width}px`;
 
-        /* Gutters */
+        // Gutters / Padding
         element.style.paddingTop = `${gutters.top}px`;
         element.style.paddingRight = `${gutters.right}px`;
         element.style.paddingBottom = `${gutters.bottom}px`;
         element.style.paddingLeft = `${gutters.left}px`;
 
-        /* Colours */
+        // Colours
         element.style.color = forecolor;
         if (iid === "IGZWinCustom")
             element.style.backgroundColor = background;
 
-        /* Load images */
+        // Caption / Text
+        const captionIIDsShown = ["IGZWinText", "GZWinTextEdit", "IGZWinBtn"];
+        if (caption && !noShowCaption && caption.search("=") === -1 && captionIIDsShown.includes(iid)) {
+            element.innerHTML = element.getAttribute("caption").replaceAll("$NEWLINE$", "<br>");
+            element.style.textAlign = align;
+        }
+
+        // Tooltip
+        if (tips)
+            element.setAttribute("title", element.getAttribute("tiptext"));
+
+        // Bitmap
         if (image) {
             python.get_image(image, edgeImage === "yes" || blttype === "edge", area.height, area.width, function(b64data) {
                 if (!b64data && element.children.length === 0) {
@@ -109,14 +120,6 @@ function _initialRender() {
                 style.sheet.insertRule(rule.join(" "), style.sheet.cssRules.length);
             });
         }
-
-        /* Show text unless it seems likely to be a image button or contains technical key/value data */
-        if (caption && !noShowCaption && !tips && caption.search("=") === -1) {
-            element.innerText = element.getAttribute("caption");
-        }
-
-        if (tips)
-            element.setAttribute("title", element.getAttribute("tiptext"));
     });
 }
 
