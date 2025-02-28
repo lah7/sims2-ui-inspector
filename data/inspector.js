@@ -15,7 +15,7 @@
 // Copyright (C) 2025 Luke Horwell <code (at) horwell (dot) me>
 //
 
-// Bridge with Python for retrieving images
+// Python Bridge
 let python;
 new QWebChannel(qt.webChannelTransport, function(channel) {
     python = channel.objects.python;
@@ -23,7 +23,7 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
 
 function _initialRender() {
     //
-    // Render each element roughly based on the UI script (XML-like) using HTML.
+    // Render each element roughly using HTML converted from UI Scripts.
     // Many attributes origin from older Maxis games and may not be used.
     //
     const style = document.createElement("style");
@@ -65,7 +65,7 @@ function _initialRender() {
         const tips = element.getAttribute("tips") === "yes" || false;
         const align = element.getAttribute("align") || "left"; // left, right, center, lefttop
 
-        // Transform into HTML layout
+        // Apply layout
         element.classList.add(element.getAttribute("clsid"));
 
         /* Area */
@@ -118,16 +118,6 @@ function _initialRender() {
         if (tips)
             element.setAttribute("title", element.getAttribute("tiptext"));
     });
-
-    // CHILDREN should be nested into the previous LEGACY element
-    while (document.querySelectorAll(".CHILDREN").length > 0) {
-        let childElement = document.querySelector(".CHILDREN");
-        let parent = childElement.previousElementSibling;
-        while (childElement.children.length > 0) {
-            parent.appendChild(childElement.children[0]);
-        }
-        childElement.remove();
-    }
 }
 
 window.onload = function() {

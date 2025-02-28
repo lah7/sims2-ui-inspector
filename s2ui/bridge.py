@@ -29,35 +29,6 @@ from s2ui.state import State
 from sims2patcher import dbpf
 
 
-def uiscript_to_html(orig: str) -> str:
-    """
-    Convert .uiscript files to plain HTML.
-    UI Scripts are XML-like formats with unquoted attribute values.
-
-    Example:
-        <LEGACY clsid=GZWinGen iid=IGZWinGen area=(10,10,605,432) >
-
-    Becomes:
-        <div class="GZWinGen" id="IGZWinGen" x="10" y="10" width="605" height="432"></div>
-    """
-    output = ""
-    for line in orig.split("\n"):
-        if line.startswith("#"):
-            continue
-        output += line + "\n"
-
-    # Replace <LEGACY> and <CHILDREN> tags with <div>
-    output = output.replace("<LEGACY", "<div class=\"LEGACY\"")
-    output = output.replace("<CHILDREN", "<div class=\"CHILDREN\"")
-    output = output.replace("</LEGACY>", "</div>")
-    output = output.replace("</CHILDREN>", "</div>")
-
-    # <LEGACY> tags didn't have closing tags, add one if not present
-    output = output.replace(" >", "></div>")
-
-    return output
-
-
 def get_image_as_png(image_attr: str) -> io.BytesIO|None:
     """
     Extract an image from the currently loaded packages ("state").

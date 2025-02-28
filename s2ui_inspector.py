@@ -41,7 +41,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import s2ui.widgets
-from s2ui.bridge import Bridge, get_image_as_png, uiscript_to_html
+from s2ui.bridge import Bridge, get_image_as_png
 from s2ui.state import State
 from sims2patcher import dbpf, uiscript
 
@@ -421,6 +421,33 @@ class MainInspectorWindow(QMainWindow):
         self.clear_state()
         self.load_files()
 
+    def _uiscript_to_html(self, root: uiscript.UIScriptRoot) -> str:
+        """
+        Render UI Script files into HTML for the webview.
+        UI Scripts are XML-like formats with (mostly) unquoted attribute values.
+        """
+        def _process_line(element: uiscript.UIScriptElement) -> str:
+            parts = ["<div class=\"LEGACY\""]
+            for key, value in element.attributes.items():
+                if not key == "id":
+                    parts.append(f"{key}=\"{value}\"")
+
+            # Generate a unique ID for selecting this element later
+            uid = hashlib.md5("".join(parts).encode("utf-8")).hexdigest()
+            parts.append(f"id=\"s2ui_{uid}\"")
+
+            parts.append(">")
+            for child in element.children:
+                parts.append(_process_line(child))
+            parts.append("</div>")
+            return " ".join(parts)
+
+        lines = []
+        for element in root.children:
+            lines.append(_process_line(element))
+
+        return "\n".join(lines)
+
     def inspect_ui_file(self, item: QTreeWidgetItem):
         """
         Change the currently selected .uiScript file for viewing/rendering.
@@ -435,20 +462,19 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.tree.clear()
         self.properties_dock.tree.clear()
 
-        # Render the UI (XML-like -> HTML)
         try:
-            html = uiscript_to_html(entry.data.decode("utf-8"))
+            data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
         except UnicodeDecodeError:
             self.webview.setHtml("")
             return QMessageBox.critical(self, "Cannot read file", "This file is not a valid .uiScript file.", QMessageBox.StandardButton.Ok)
 
+        # Render the UI into HTML
+        html = self._uiscript_to_html(data)
         with open(get_resource("inspector.html"), "r", encoding="utf-8") as f:
             html = f.read().replace("PLACEHOLDER", html)
         self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(get_resource("")))
 
         # Update the elements and properties dock
-        data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
-
         def _process_element(element: uiscript.UIScriptElement, parent: QTreeWidget|QTreeWidgetItem):
             iid = element.attributes.get("iid", "Unknown")
             caption = element.attributes.get("caption", "")
