@@ -291,6 +291,7 @@ class MainInspectorWindow(QMainWindow):
             browser.setNameFilter("The Sims 2 Package Files (*.package CaSIEUI.data)")
 
         if browser.exec() == QFileDialog.DialogCode.Accepted:
+            self.action_reload.setEnabled(False)
             self.clear_state()
             if open_dir:
                 self.discover_files(browser.selectedFiles()[0])
@@ -328,6 +329,7 @@ class MainInspectorWindow(QMainWindow):
         Load all UI scripts found in game directories.
         Display unique instances of UI scripts, and where they were found.
         """
+        self.action_reload.setEnabled(False)
         self.status_bar.showMessage(f"Opening {len(State.file_list)} packages...")
         self.setCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
@@ -614,6 +616,7 @@ class MainInspectorWindow(QMainWindow):
         """
         Continue loading files in the background to identify captions.
         """
+        self.action_reload.setEnabled(False)
         while self.items:
             item = self.items.pop(0)
             entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
@@ -633,6 +636,8 @@ class MainInspectorWindow(QMainWindow):
 
                 item.setText(2, max(matches, key=len))
                 item.setToolTip(2, "\n".join(matches))
+
+        self.action_reload.setEnabled(True)
 
     def open_original_code(self):
         """
