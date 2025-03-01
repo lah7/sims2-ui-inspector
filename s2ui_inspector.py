@@ -221,6 +221,7 @@ class MainInspectorWindow(QMainWindow):
 
         self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Original Code")
         self.action_script_src.triggered.connect(self.open_original_code)
+        self.action_script_src.setDisabled(True)
         self.menu_tools.addAction(self.action_script_src)
 
         self.menu_copy_ids = QMenu()
@@ -238,6 +239,7 @@ class MainInspectorWindow(QMainWindow):
         self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
         self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
         self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}"))
+        self.action_copy_ids.setDisabled(True)
         self.menu_tools.addAction(self.action_copy_ids)
 
         self.menu_tools.addSeparator()
@@ -306,6 +308,9 @@ class MainInspectorWindow(QMainWindow):
         Reset the inspector ready to open new files.
         """
         self.uiscript_dock.tree.clear()
+        self.action_script_src.setDisabled(True)
+        self.action_copy_ids.setDisabled(True)
+
         State.graphics = {}
         State.current_group_id = 0x0
         State.current_instance_id = 0x0
@@ -575,6 +580,9 @@ class MainInspectorWindow(QMainWindow):
         """
         if not item:
             return
+
+        self.action_script_src.setEnabled(True)
+        self.action_copy_ids.setEnabled(True)
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
         element_id: str = item.data(1, Qt.ItemDataRole.UserRole)
