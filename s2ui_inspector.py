@@ -118,6 +118,13 @@ class MainInspectorWindow(QMainWindow):
         self._create_menu_bar()
         self.uiscript_dock.toolbar.addAction(self.action_script_src)
         self.uiscript_dock.toolbar.addAction(self.action_copy_ids)
+        self.elements_dock.toolbar.addAction(self.action_element_visible)
+
+        # Right click actions
+        self.elements_menu = QMenu()
+        self.elements_menu.addAction(self.action_element_visible)
+        self.elements_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.elements_dock.tree.customContextMenuRequested.connect(lambda: self.elements_menu.exec(QCursor.pos()))
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
@@ -183,6 +190,16 @@ class MainInspectorWindow(QMainWindow):
         self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
         self.action_exit.triggered.connect(self.close)
         self.menu_file.addAction(self.action_exit)
+
+        # === Edit ===
+        self.menu_edit = QMenu("Edit")
+        self.menu_bar.addMenu(self.menu_edit)
+
+        self.action_element_visible = QAction(QIcon.fromTheme("view-visible"), "Show Element")
+        self.action_element_visible.setCheckable(True)
+        self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
+        self.action_element_visible.triggered.connect(self.toggle_element_visibility)
+        self.menu_edit.addAction(self.action_element_visible)
 
         # === View ===
         self.menu_view = QMenu("View")
@@ -521,6 +538,7 @@ class MainInspectorWindow(QMainWindow):
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
+            item.setData(1, Qt.ItemDataRole.UserRole, True)
             item.setData(2, Qt.ItemDataRole.UserRole, self._get_s2ui_element_id(element))
             item.setToolTip(1, caption)
             item.setToolTip(2, element_id)
@@ -589,6 +607,7 @@ class MainInspectorWindow(QMainWindow):
 
         self.action_script_src.setEnabled(True)
         self.action_copy_ids.setEnabled(True)
+        self.action_element_visible.setChecked(item.data(1, Qt.ItemDataRole.UserRole))
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
         element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
@@ -717,6 +736,38 @@ class MainInspectorWindow(QMainWindow):
 
         self.base_layout.addWidget(self.web_splitter)
         self.action_debug_inspect.setDisabled(True)
+
+    def toggle_element_visibility(self):
+        """
+        Toggle the visibility of the currently selected element.
+        """
+        item = self.elements_dock.tree.currentItem()
+        if not item:
+            return
+
+        element_id = item.data(2, Qt.ItemDataRole.UserRole)
+        visible = not item.data(1, Qt.ItemDataRole.UserRole)
+        item.setData(1, Qt.ItemDataRole.UserRole, visible)
+        item.setIcon(2, QIcon.fromTheme("view-hidden") if not visible else QIcon())
+
+        if visible:
+            self.webview_page.runJavaScript(f"showElement('{element_id}')")
+        else:
+            self.webview_page.runJavaScript(f"hideElement('{element_id}')")
+
+        # De-emphasise the text and descendants
+        for child in [item] + s2ui.widgets.iterate_children(item):
+            _seen = [child.data(1, Qt.ItemDataRole.UserRole)]
+            parent = child.parent()
+            while parent:
+                _seen.append(parent.data(1, Qt.ItemDataRole.UserRole))
+                parent = parent.parent()
+
+            for c in range(0, child.columnCount()):
+                if all(_seen):
+                    child.setData(c, Qt.ItemDataRole.ForegroundRole, None)
+                else:
+                    child.setForeground(c, Qt.GlobalColor.gray)
 
 
 if __name__ == "__main__":

@@ -139,7 +139,7 @@ function _registerMouseEvents() {
     // This ensures only the topmost element is highlighted based on current mouse position.
     //
     document.addEventListener("click", function(event) {
-        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY"));
+        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY") && !el.classList.contains("hidden"));
         if (elements.length > 0) {
             event.stopPropagation();
             python.select_element(elements[0].getAttribute("id"));
@@ -150,7 +150,7 @@ function _registerMouseEvents() {
         document.querySelectorAll(".hover").forEach((element) => {
             element.classList.remove("hover");
         });
-        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY"));
+        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY") && !el.classList.contains("hidden"));
         if (elements.length > 0) {
             event.stopPropagation();
             elements[0].classList.add("hover");
@@ -181,6 +181,20 @@ function hoverElement(id) {
             element.classList.add("hover");
         }
     });
+}
+
+function showElement(id) {
+    //
+    // Explicitly show an element from elements tree previously hidden.
+    //
+    document.getElementById(id).classList.remove("hidden");
+}
+
+function hideElement(id) {
+    //
+    // Explicitly hide an element from elements tree.
+    //
+    document.getElementById(id).classList.add("hidden");
 }
 
 window.onload = function() {
