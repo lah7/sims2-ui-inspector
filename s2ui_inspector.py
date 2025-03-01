@@ -159,15 +159,14 @@ class MainInspectorWindow(QMainWindow):
         self.menu_file = QMenu("File")
         self.menu_bar.addMenu(self.menu_file)
 
-        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Package...")
-        self.action_open_pkg.setShortcut(QKeySequence.StandardKey.Open)
-        self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
-        self.menu_file.addAction(self.action_open_pkg)
-
         self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "Open Game Folder...")
+        self.action_open_dir.setShortcut(QKeySequence.StandardKey.Open)
         self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
         self.menu_file.addAction(self.action_open_dir)
 
+        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Single Package...")
+        self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
+        self.menu_file.addAction(self.action_open_pkg)
         self.menu_file.addSeparator()
         self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "Reload Package")
         self.action_reload.triggered.connect(self.reload_files)
@@ -281,7 +280,7 @@ class MainInspectorWindow(QMainWindow):
         """
         Show the file/folder dialog to select a package file.
         """
-        browser = QFileDialog(self)
+        browser = QFileDialog(self, "Open Game Folder" if open_dir else "Open Package File")
         if open_dir:
             browser.setFileMode(QFileDialog.FileMode.Directory)
             browser.setViewMode(QFileDialog.ViewMode.List)
