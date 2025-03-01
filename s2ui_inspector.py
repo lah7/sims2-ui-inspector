@@ -189,18 +189,18 @@ class MainInspectorWindow(QMainWindow):
         self.menu_copy_ids = QMenu()
 
         self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
-        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id, "Group ID"))
+        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
         self.menu_copy_ids.addAction(self.action_copy_group_id)
 
         self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
-        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id, "Instance ID"))
+        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
         self.menu_copy_ids.addAction(self.action_copy_instance_id)
 
         self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy IDs")
         self.action_copy_ids.setMenu(self.menu_copy_ids)
         self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
         self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
-        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}", "ID"))
+        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}"))
         self.menu_item.addAction(self.action_copy_ids)
 
         # === View ===
@@ -266,14 +266,14 @@ class MainInspectorWindow(QMainWindow):
         self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
         self.menu_help.addAction(self.action_about_app)
 
-    def _copy_to_clipboard(self, text: str|int, context: str):
+    def _copy_to_clipboard(self, text: str|int):
         """Copy text to the clipboard"""
         clipboard = QApplication.clipboard()
         if isinstance(text, int):
             text = hex(text)
         if clipboard:
             clipboard.setText(text)
-            self.status_bar.showMessage(f"{context} {text} copied to clipboard", 2000)
+            self.status_bar.showMessage(f"Text copied: {text}", 5000)
         else:
             self.status_bar.showMessage("Unable to copy to clipboard")
 
