@@ -165,6 +165,15 @@ function _registerMouseEvents() {
             python.hover_element(elementID);
         }
     });
+
+    document.addEventListener("contextmenu", function(event) {
+        event.preventDefault();
+        const elementID = _getTopMostElement(event);
+        if (elementID) {
+            python.select_element(elementID);
+            python.right_click_element();
+        }
+    });
 }
 
 function selectElement(id) {

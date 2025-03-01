@@ -24,7 +24,8 @@ import io
 
 import PIL.Image
 from PyQt6.QtCore import QObject, Qt, pyqtSlot
-from PyQt6.QtWidgets import QTreeWidget, QTreeWidgetItemIterator
+from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QMenu, QTreeWidget, QTreeWidgetItemIterator
 
 from s2ui.state import State
 from sims2patcher import dbpf
@@ -70,9 +71,10 @@ class Bridge(QObject):
     """
     Bridge between Python and JavaScript.
     """
-    def __init__(self, element_tree: QTreeWidget) -> None:
+    def __init__(self, element_tree: QTreeWidget, elements_menu: QMenu) -> None:
         super().__init__()
         self.element_tree = element_tree
+        self.elements_menu = elements_menu
 
     @pyqtSlot(str, bool, int, int, result=str) # type: ignore
     def get_image(self, image_attr: str, is_edge_image: bool, height: int, width: int) -> str:
@@ -177,3 +179,10 @@ class Bridge(QObject):
                     item.setData(c, Qt.ItemDataRole.BackgroundRole, None)
 
             iterator += 1
+
+    @pyqtSlot()
+    def right_click_element(self):
+        """
+        Open the right click menu for the selected element.
+        """
+        self.elements_menu.exec(QCursor.pos())

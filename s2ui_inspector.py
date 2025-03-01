@@ -140,7 +140,7 @@ class MainInspectorWindow(QMainWindow):
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
         self.webview_page.setWebChannel(self.channel)
-        self.bridge = Bridge(self.elements_dock.tree)
+        self.bridge = Bridge(self.elements_dock.tree, self.elements_menu)
         self.channel.registerObject("python", self.bridge)
 
         # Window properties
