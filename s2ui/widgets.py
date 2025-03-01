@@ -24,6 +24,22 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 
+def iterate_children(item: QTreeWidgetItem) -> list[QTreeWidgetItem]:
+    """
+    Get all children of a tree widget item recursively.
+    """
+    if not item:
+        return []
+
+    children = []
+    for i in range(item.childCount()):
+        child = item.child(i)
+        if child:
+            children.append(child)
+            children += iterate_children(child)
+    return children
+
+
 class DockTree(QDockWidget):
     """A dock widget with a title and a tree widget."""
     def __init__(self, parent: QMainWindow, title: str, min_width: int, position: Qt.DockWidgetArea):
@@ -72,21 +88,6 @@ class FilterBox(QLineEdit):
         self.setClearButtonEnabled(True)
         self.textChanged.connect(self.update_tree)
 
-    def _get_all_children(self, item: QTreeWidgetItem) -> list[QTreeWidgetItem]:
-        """
-        Get all children of an item recursively.
-        """
-        if not item:
-            return []
-
-        children = []
-        for i in range(item.childCount()):
-            child = item.child(i)
-            if child:
-                children.append(child)
-                children += self._get_all_children(child)
-        return children
-
     def _reset_tree(self):
         """
         Loop through all items in the tree and show them.
@@ -94,7 +95,7 @@ class FilterBox(QLineEdit):
         root = self.tree_widget.invisibleRootItem()
         if not root:
             return
-        for item in self._get_all_children(root):
+        for item in iterate_children(root):
             item.setHidden(False)
             for col in range(0, item.columnCount()):
                 item.setData(col, Qt.ItemDataRole.BackgroundRole, None)
@@ -135,7 +136,7 @@ class FilterBox(QLineEdit):
         root = self.tree_widget.invisibleRootItem()
         if not root:
             return
-        for item in self._get_all_children(root):
+        for item in iterate_children(root):
             self._update_item(item, criteria)
 
     def refresh_tree(self):
