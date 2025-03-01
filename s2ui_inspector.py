@@ -549,6 +549,8 @@ class MainInspectorWindow(QMainWindow):
                 if png is None:
                     pixmap = QPixmap(16, 16)
                     pixmap.fill(Qt.GlobalColor.red)
+                    item.setToolTip(0, f"Missing bitmap: {image_attr}")
+                    item.setForeground(0, Qt.GlobalColor.red)
                 else:
                     png_data = png.getvalue()
                     pixmap = QPixmap()
@@ -631,8 +633,13 @@ class MainInspectorWindow(QMainWindow):
                         _group_id, _instance_id = image_attr[1:-1].split(",")
                         group_id = int(_group_id, 16)
                         instance_id = int(_instance_id, 16)
-                        QTreeWidgetItem(prop, ["Group ID", hex(group_id)])
-                        QTreeWidgetItem(prop, ["Instance ID", hex(instance_id)])
+                        subprop1 = QTreeWidgetItem(prop, ["Group ID", hex(group_id)])
+                        subprop2 = QTreeWidgetItem(prop, ["Instance ID", hex(instance_id)])
+                        if (group_id, instance_id) not in State.graphics:
+                            for i in [prop, subprop1, subprop2]:
+                                for c in range(0, i.columnCount()):
+                                    i.setToolTip(1, "Missing bitmap")
+                                    i.setForeground(c, Qt.GlobalColor.red)
 
             if key.find("color") != -1 and len(value.split(",")) == 3: # (R, G, B)
                 _color = value[1:-1].split(",")
