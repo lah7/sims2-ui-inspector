@@ -87,13 +87,16 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.tree.setSortingEnabled(True)
         self.uiscript_dock.tree.currentItemChanged.connect(self.inspect_ui_file)
         self.uiscript_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_item.exec(QCursor.pos()))
+        self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_tools.exec(QCursor.pos()))
 
         # Dock: Elements
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
         self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
         self.elements_dock.tree.setColumnWidth(0, 225)
         self.elements_dock.tree.setColumnWidth(3, 100)
+        self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
+        self.elements_dock.tree.setMouseTracking(True)
+        self.elements_dock.tree.itemEntered.connect(self.hover_element)
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
@@ -101,9 +104,6 @@ class MainInspectorWindow(QMainWindow):
         self.properties_dock.tree.setColumnWidth(0, 200)
         self.properties_dock.tree.setSortingEnabled(True)
         self.properties_dock.tree.sortByColumn(0, Qt.SortOrder.AscendingOrder)
-        self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
-        self.elements_dock.tree.setMouseTracking(True)
-        self.elements_dock.tree.itemEntered.connect(self.hover_element)
 
         # Allow drag-and-dropping docks into each other
         self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
@@ -167,8 +167,9 @@ class MainInspectorWindow(QMainWindow):
         self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Single Package...")
         self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
         self.menu_file.addAction(self.action_open_pkg)
+
         self.menu_file.addSeparator()
-        self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "Reload Package")
+        self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "Reload Packages")
         self.action_reload.triggered.connect(self.reload_files)
         self.menu_file.addAction(self.action_reload)
 
@@ -176,31 +177,6 @@ class MainInspectorWindow(QMainWindow):
         self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
         self.action_exit.triggered.connect(self.close)
         self.menu_file.addAction(self.action_exit)
-
-        # === Item ===
-        self.menu_item = QMenu("Item")
-        self.menu_bar.addMenu(self.menu_item)
-
-        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Source")
-        self.action_script_src.triggered.connect(self.open_original_code)
-        self.menu_item.addAction(self.action_script_src)
-
-        self.menu_copy_ids = QMenu()
-
-        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
-        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
-        self.menu_copy_ids.addAction(self.action_copy_group_id)
-
-        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
-        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
-        self.menu_copy_ids.addAction(self.action_copy_instance_id)
-
-        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy IDs")
-        self.action_copy_ids.setMenu(self.menu_copy_ids)
-        self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
-        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
-        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}"))
-        self.menu_item.addAction(self.action_copy_ids)
 
         # === View ===
         self.menu_view = QMenu("View")
@@ -239,10 +215,35 @@ class MainInspectorWindow(QMainWindow):
 
         self.menu_view.addSeparator()
 
-        self.action_debug_inspect = QAction(QIcon.fromTheme("tools-symbolic"), "Web Inspector (Debug)")
+        # === Tools ===
+        self.menu_tools = QMenu("Tools")
+        self.menu_bar.addMenu(self.menu_tools)
+
+        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Original Code")
+        self.action_script_src.triggered.connect(self.open_original_code)
+        self.menu_tools.addAction(self.action_script_src)
+
+        self.menu_copy_ids = QMenu()
+
+        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
+        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
+        self.menu_copy_ids.addAction(self.action_copy_group_id)
+
+        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
+        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
+        self.menu_copy_ids.addAction(self.action_copy_instance_id)
+
+        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy IDs")
+        self.action_copy_ids.setMenu(self.menu_copy_ids)
+        self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
+        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
+        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}"))
+        self.menu_tools.addAction(self.action_copy_ids)
+
+        self.menu_tools.addSeparator()
+        self.action_debug_inspect = QAction(QIcon.fromTheme("tools-symbolic"), "Debug Web View")
         self.action_debug_inspect.triggered.connect(self.open_web_dev_tools)
-        self.menu_view.addAction(self.action_debug_inspect)
-        self._actions.append(self.action_debug_inspect)
+        self.menu_tools.addAction(self.action_debug_inspect)
 
         # === Help ===
         self.menu_help = QMenu("Help")
@@ -312,6 +313,8 @@ class MainInspectorWindow(QMainWindow):
         """
         Gather a file list of packages containing UI scripts.
         """
+        self.status_bar.showMessage(f"Discovering files: {path}")
+        QApplication.processEvents()
         State.file_list = []
         for filename in ["TSData/Res/UI/ui.package", "TSData/Res/UI/CaSIEUI.data"]:
             State.file_list += glob.glob(f"{path}/**/{filename}", recursive=True)
