@@ -138,11 +138,19 @@ function _registerMouseEvents() {
     // Handle events when hovering or clicking an element.
     // This ensures only the topmost element is highlighted based on current mouse position.
     //
-    document.addEventListener("click", function(event) {
+    function _getTopMostElement(event) {
         const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY") && !el.classList.contains("hidden"));
         if (elements.length > 0) {
+            return elements[0].getAttribute("id");
+        }
+        return null;
+    }
+
+    document.addEventListener("click", function(event) {
+        const elementID = _getTopMostElement(event);
+        if (elementID) {
             event.stopPropagation();
-            python.select_element(elements[0].getAttribute("id"));
+            python.select_element(elementID);
         }
     });
 
@@ -150,11 +158,11 @@ function _registerMouseEvents() {
         document.querySelectorAll(".hover").forEach((element) => {
             element.classList.remove("hover");
         });
-        const elements = document.elementsFromPoint(event.clientX, event.clientY).filter((el) => el.classList.contains("LEGACY") && !el.classList.contains("hidden"));
-        if (elements.length > 0) {
+        const elementID = _getTopMostElement(event);
+        if (elementID) {
             event.stopPropagation();
-            elements[0].classList.add("hover");
-            python.hover_element(elements[0].getAttribute("id"));
+            document.getElementById(elementID).classList.add("hover");
+            python.hover_element(elementID);
         }
     });
 }
