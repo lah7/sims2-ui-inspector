@@ -18,10 +18,10 @@ Module for Qt widgets used in the UI.
 # Copyright (C) 2025 Luke Horwell <code@horwell.me>
 #
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
-                             QMainWindow, QTreeWidget, QTreeWidgetItem,
-                             QVBoxLayout, QWidget)
+                             QMainWindow, QToolBar, QTreeWidget,
+                             QTreeWidgetItem, QVBoxLayout, QWidget)
 
 
 class DockTree(QDockWidget):
@@ -36,6 +36,7 @@ class DockTree(QDockWidget):
         # Dock widget/layout
         self.base_widget = QWidget()
         self.base_layout = QVBoxLayout()
+        self.base_layout.setSpacing(0)
         self.base_widget.setLayout(self.base_layout)
         self.setWidget(self.base_widget)
         parent.addDockWidget(position, self)
@@ -45,7 +46,17 @@ class DockTree(QDockWidget):
         self.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.filter = FilterBox(self.tree)
 
-        self.base_layout.addWidget(self.filter)
+        # Toolbar
+        self.toolbar = QToolBar(self)
+        self.toolbar.setMovable(False)
+        self.toolbar.setFloatable(False)
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        self.toolbar.setContentsMargins(0, 0, 0, 6)
+        self.toolbar.setIconSize(QSize(22, 22))
+        self.toolbar.setStyleSheet("QToolBar { spacing: 3px; }")
+        self.toolbar.addWidget(self.filter)
+
+        self.base_layout.addWidget(self.toolbar)
         self.base_layout.addWidget(self.tree)
 
 

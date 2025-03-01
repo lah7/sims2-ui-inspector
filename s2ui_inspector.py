@@ -108,6 +108,11 @@ class MainInspectorWindow(QMainWindow):
         # Allow drag-and-dropping docks into each other
         self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
 
+        # Menu bar; add actions to dock toolbars
+        self._create_menu_bar()
+        self.uiscript_dock.toolbar.addAction(self.action_script_src)
+        self.uiscript_dock.toolbar.addAction(self.action_copy_ids)
+
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
         self.status_bar.showMessage("Loading...")
@@ -145,8 +150,6 @@ class MainInspectorWindow(QMainWindow):
         else:
             self.browse(open_dir=True)
 
-        self._create_menu_bar()
-
     def _create_menu_bar(self):
         """Create the actions for the application's menu bar"""
         self.menu_bar = QMenuBar()
@@ -182,15 +185,23 @@ class MainInspectorWindow(QMainWindow):
         self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Source")
         self.action_script_src.triggered.connect(self.open_original_code)
         self.menu_item.addAction(self.action_script_src)
-        self.menu_item.addSeparator()
+
+        self.menu_copy_ids = QMenu()
 
         self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
         self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id, "Group ID"))
-        self.menu_item.addAction(self.action_copy_group_id)
+        self.menu_copy_ids.addAction(self.action_copy_group_id)
 
         self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
         self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id, "Instance ID"))
-        self.menu_item.addAction(self.action_copy_instance_id)
+        self.menu_copy_ids.addAction(self.action_copy_instance_id)
+
+        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy IDs")
+        self.action_copy_ids.setMenu(self.menu_copy_ids)
+        self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
+        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
+        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}", "ID"))
+        self.menu_item.addAction(self.action_copy_ids)
 
         # === View ===
         self.menu_view = QMenu("View")
