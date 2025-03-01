@@ -163,6 +163,8 @@ function _registerMouseEvents() {
             event.stopPropagation();
             document.getElementById(elementID).classList.add("hover");
             python.hover_element(elementID);
+        } else {
+            python.hover_element("");
         }
     });
 

@@ -7,7 +7,7 @@ html, body {
 
 /* Highlight hovered / currently selected element */
 .hover {
-    outline: 1px solid #800000;
+    outline: 1px dashed lightgrey;
 }
 
 .selected {
