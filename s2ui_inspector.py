@@ -76,6 +76,8 @@ class MainInspectorWindow(QMainWindow):
         self.setCentralWidget(self.base_widget)
 
         # Dock: UI Scripts
+        # QTreeWidgetItem data columns:
+        # - 0: dbpf.Entry
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
@@ -90,6 +92,10 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_tools.exec(QCursor.pos()))
 
         # Dock: Elements
+        # QTreeWidgetItem data columns:
+        # - 0: uiscript.UIScriptElement
+        # - 1: bool: Visible
+        # - 2: str: s2ui_element_id
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
         self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
         self.elements_dock.tree.setColumnWidth(0, 225)
@@ -515,7 +521,7 @@ class MainInspectorWindow(QMainWindow):
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
-            item.setData(1, Qt.ItemDataRole.UserRole, self._get_s2ui_element_id(element))
+            item.setData(2, Qt.ItemDataRole.UserRole, self._get_s2ui_element_id(element))
             item.setToolTip(1, caption)
             item.setToolTip(2, element_id)
             item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
@@ -571,7 +577,7 @@ class MainInspectorWindow(QMainWindow):
         if not item:
             return
 
-        element_id: str = item.data(1, Qt.ItemDataRole.UserRole)
+        element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
         self.webview_page.runJavaScript(f"hoverElement('{element_id}')")
 
     def inspect_element(self, item: QTreeWidgetItem):
@@ -585,7 +591,7 @@ class MainInspectorWindow(QMainWindow):
         self.action_copy_ids.setEnabled(True)
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
-        element_id: str = item.data(1, Qt.ItemDataRole.UserRole)
+        element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
         self.webview_page.runJavaScript(f"selectElement('{element_id}')")
 
         self.properties_dock.tree.clear()

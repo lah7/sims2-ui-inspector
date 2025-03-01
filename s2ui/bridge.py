@@ -150,7 +150,7 @@ class Bridge(QObject):
             if not item:
                 return
 
-            if item.data(1, Qt.ItemDataRole.UserRole) == element_id:
+            if item.data(2, Qt.ItemDataRole.UserRole) == element_id:
                 self.element_tree.setCurrentItem(item)
                 self.element_tree.scrollToItem(item)
                 break
@@ -168,7 +168,7 @@ class Bridge(QObject):
             if not item:
                 return
 
-            if item.data(1, Qt.ItemDataRole.UserRole) == element_id:
+            if item.data(2, Qt.ItemDataRole.UserRole) == element_id:
                 for c in range(item.columnCount()):
                     item.setBackground(c, Qt.GlobalColor.darkGray)
             else:
