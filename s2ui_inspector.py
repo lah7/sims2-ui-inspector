@@ -78,6 +78,7 @@ class MainInspectorWindow(QMainWindow):
         # Dock: UI Scripts
         # QTreeWidgetItem data columns:
         # - 0: dbpf.Entry
+        # - 1: uiscript.UIScriptRoot
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
@@ -374,10 +375,6 @@ class MainInspectorWindow(QMainWindow):
             for entry in [entry for entry in package.entries if entry.type_id == dbpf.TYPE_UI_DATA]:
                 key = (entry.group_id, entry.instance_id)
 
-                # Ignore binary files
-                if entry.decompressed_size > 1024 * 1024:
-                    continue
-
                 # Look up an entry by group and instance ID
                 if key in ui_dups:
                     ui_dups[key].append(entry)
@@ -401,6 +398,9 @@ class MainInspectorWindow(QMainWindow):
             key = (group_id, instance_id)
             checksums: dict[dbpf.Entry, str] = {}
             for entry in entries:
+                if entry.decompressed_size > 1024 * 1024:
+                    checksums[entry] = f"{group_id}{instance_id}"
+                    continue
                 checksums[entry] = hashlib.md5(entry.data_safe).hexdigest()
             identical = len(set(checksums.values())) == 1
             package_names = ", ".join(list(set(entry_to_package[entry] for entry in entries)))
@@ -411,6 +411,16 @@ class MainInspectorWindow(QMainWindow):
                 entry = entries[0]
                 item = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
                 item.setData(0, Qt.ItemDataRole.UserRole, entry)
+                try:
+                    if entry.decompressed_size > 1024 * 1024:
+                        raise ValueError("File too large")
+                    data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
+                    item.setData(1, Qt.ItemDataRole.UserRole, data)
+                except (ValueError, UnicodeDecodeError):
+                    item.setForeground(0, QColor(Qt.GlobalColor.red))
+                    item.setForeground(1, QColor(Qt.GlobalColor.red))
+                    item.setToolTip(0, "Failed to read file")
+                    item.setToolTip(1, "Failed to read file")
                 self.items.append(item)
 
             # Display a tree item for each unique instance of the UI script
@@ -510,17 +520,12 @@ class MainInspectorWindow(QMainWindow):
             return
 
         entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
+        data: uiscript.UIScriptRoot = item.data(1, Qt.ItemDataRole.UserRole)
         State.current_group_id = entry.group_id
         State.current_instance_id = entry.instance_id
 
         self.elements_dock.tree.clear()
         self.properties_dock.tree.clear()
-
-        try:
-            data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
-        except UnicodeDecodeError:
-            self.webview.setHtml("")
-            return QMessageBox.critical(self, "Cannot read file", "This file is not a valid .uiScript file.", QMessageBox.StandardButton.Ok)
 
         # Render the UI into HTML
         html = self._uiscript_to_html(data)
