@@ -40,6 +40,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QSplitter, QStatusBar, QTextEdit, QTreeWidget,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
+import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
 from s2ui.state import State
@@ -79,6 +80,7 @@ class MainInspectorWindow(QMainWindow):
         # QTreeWidgetItem data columns:
         # - 0: dbpf.Entry
         # - 1: uiscript.UIScriptRoot
+        # - 3: str: Full path to package file
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
@@ -144,6 +146,9 @@ class MainInspectorWindow(QMainWindow):
         self.bridge = Bridge(self.elements_dock.tree, self.elements_menu)
         self.channel.registerObject("python", self.bridge)
 
+        # Features
+        self.search_dialog = s2ui.search.GlobalSearchDialog(self, self.uiscript_dock.tree, self.elements_dock.tree, self.properties_dock.tree)
+
         # Window properties
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
@@ -201,6 +206,12 @@ class MainInspectorWindow(QMainWindow):
         self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
+
+        self.menu_edit.addSeparator()
+        self.action_global_search = QAction(QIcon.fromTheme("edit-find"), "Find References...")
+        self.action_global_search.setShortcut(QKeySequence.fromString("Ctrl+F"))
+        self.action_global_search.triggered.connect(self.open_global_search)
+        self.menu_edit.addAction(self.action_global_search)
 
         # === View ===
         self.menu_view = QMenu("View")
@@ -339,6 +350,8 @@ class MainInspectorWindow(QMainWindow):
         State.current_group_id = 0x0
         State.current_instance_id = 0x0
 
+        self.search_dialog.reset()
+
     def discover_files(self, path: str):
         """
         Gather a file list of packages containing UI scripts.
@@ -366,6 +379,7 @@ class MainInspectorWindow(QMainWindow):
         ui_dups: dict[tuple, list[dbpf.Entry]] = {}
         entry_to_game: dict[dbpf.Entry, str] = {}
         entry_to_package: dict[dbpf.Entry, str] = {}
+        entry_to_path: dict[dbpf.Entry, str] = {}
 
         for path in State.file_list:
             package = dbpf.DBPF(path)
@@ -384,6 +398,7 @@ class MainInspectorWindow(QMainWindow):
                 # Look up which game/package an entry belongs to
                 entry_to_game[entry] = package.game_name
                 entry_to_package[entry] = package_name
+                entry_to_path[entry] = path
 
             # Graphics can be looked up by group and instance ID
             for entry in [entry for entry in package.entries if entry.type_id == dbpf.TYPE_IMAGE]:
@@ -411,6 +426,7 @@ class MainInspectorWindow(QMainWindow):
                 entry = entries[0]
                 item = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
                 item.setData(0, Qt.ItemDataRole.UserRole, entry)
+                item.setData(3, Qt.ItemDataRole.UserRole, entry_to_path[entry])
                 try:
                     if entry.decompressed_size > 1024 * 1024:
                         raise ValueError("File too large")
@@ -769,6 +785,14 @@ class MainInspectorWindow(QMainWindow):
                     child.setData(c, Qt.ItemDataRole.ForegroundRole, None)
                 else:
                     child.setForeground(c, Qt.GlobalColor.gray)
+
+    def open_global_search(self):
+        """
+        Open a dialog to search for data across all UI scripts.
+        """
+        self.search_dialog.show()
+        self.search_dialog.raise_()
+        self.search_dialog.activateWindow()
 
 
 if __name__ == "__main__":
