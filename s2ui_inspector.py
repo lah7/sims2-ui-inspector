@@ -41,7 +41,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import s2ui.widgets
-from s2ui.bridge import Bridge, get_image_as_png
+from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
 from s2ui.state import State
 from sims2patcher import dbpf, uiscript
 
@@ -476,17 +476,6 @@ class MainInspectorWindow(QMainWindow):
         self.clear_state()
         self.load_files()
 
-    def _get_s2ui_element_id(self, element: uiscript.UIScriptElement) -> str:
-        """
-        Generate a unique ID for selecting this element internally between HTML/JS and PyQt.
-        """
-        parts = []
-        for key, value in element.attributes.items():
-            parts.append(key)
-            parts.append(value)
-        digest = hashlib.md5("".join(parts).encode("utf-8")).hexdigest()
-        return f"s2ui_{digest}"
-
     def _uiscript_to_html(self, root: uiscript.UIScriptRoot) -> str:
         """
         Render UI Script files into HTML for the webview.
@@ -498,7 +487,7 @@ class MainInspectorWindow(QMainWindow):
                 if not key == "id":
                     parts.append(f"{key}=\"{value}\"")
 
-            s2ui_element_id = self._get_s2ui_element_id(element)
+            s2ui_element_id = get_s2ui_element_id(element)
             parts.append(f"id=\"{s2ui_element_id}\"")
             parts.append(">")
             for child in element.children:
@@ -544,7 +533,7 @@ class MainInspectorWindow(QMainWindow):
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
             item.setData(1, Qt.ItemDataRole.UserRole, True)
-            item.setData(2, Qt.ItemDataRole.UserRole, self._get_s2ui_element_id(element))
+            item.setData(2, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
             item.setToolTip(1, caption)
             item.setToolTip(2, element_id)
             item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
