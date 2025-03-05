@@ -430,8 +430,9 @@ class MainInspectorWindow(QMainWindow):
                 try:
                     if entry.decompressed_size > 1024 * 1024:
                         raise ValueError("File too large")
-                    data: uiscript.UIScriptRoot = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
+                    data: uiscript.UIScriptRoot|None = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
                     item.setData(1, Qt.ItemDataRole.UserRole, data)
+
                 except (ValueError, UnicodeDecodeError):
                     item.setForeground(0, QColor(Qt.GlobalColor.red))
                     item.setForeground(1, QColor(Qt.GlobalColor.red))
@@ -454,6 +455,11 @@ class MainInspectorWindow(QMainWindow):
                     _game_names.append(game_name)
 
                     try:
+                        data: uiscript.UIScriptRoot|None = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
+                    except ValueError:
+                        data = None
+
+                    try:
                         # Append to existing item
                         child: QTreeWidgetItem = _md5_to_item[checksum]
                         if not package_name in child.text(3):
@@ -464,6 +470,8 @@ class MainInspectorWindow(QMainWindow):
                         # Create new item
                         child = QTreeWidgetItem(parent, [str(hex(group_id)), str(hex(instance_id)), "", package_name, game_name])
                         child.setData(0, Qt.ItemDataRole.UserRole, entry)
+                        child.setData(1, Qt.ItemDataRole.UserRole, data)
+                        child.setData(3, Qt.ItemDataRole.UserRole, entry_to_path[entry])
                         self.items.append(child)
                         _md5_to_item[checksum] = child
 
@@ -526,6 +534,14 @@ class MainInspectorWindow(QMainWindow):
 
         entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
         data: uiscript.UIScriptRoot = item.data(1, Qt.ItemDataRole.UserRole)
+
+        if not data:
+            # Group item, select first child instead
+            item.setExpanded(True)
+            child = item.child(0)
+            self.uiscript_dock.tree.setCurrentItem(child)
+            return
+
         State.current_group_id = entry.group_id
         State.current_instance_id = entry.instance_id
 
