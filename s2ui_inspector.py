@@ -422,7 +422,7 @@ class MainInspectorWindow(QMainWindow):
 
             # Display a single item when UI scripts are identical across all games (or is only one)
             if identical:
-                game_names = ", ".join([entry_to_game[entry] for entry in entries])
+                game_names = ", ".join(sorted(set([entry_to_game[entry] for entry in entries])))
                 entry = entries[0]
                 item = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
                 item.setData(0, Qt.ItemDataRole.UserRole, entry)
@@ -446,6 +446,7 @@ class MainInspectorWindow(QMainWindow):
                 parent.setData(0, Qt.ItemDataRole.UserRole, entries[0])
                 self.items.append(parent)
                 _md5_to_item: dict[str, QTreeWidgetItem] = {}
+                _package_names = []
                 _game_names = []
 
                 for entry in entries:
@@ -464,8 +465,10 @@ class MainInspectorWindow(QMainWindow):
                         child: QTreeWidgetItem = _md5_to_item[checksum]
                         if not package_name in child.text(3):
                             child.setText(3, f"{child.text(3)}, {package_name}")
+                            _package_names.append(package_name)
                         if not game_name in child.text(4):
                             child.setText(4, f"{child.text(4)}, {game_name}")
+                            _game_names.append(game_name)
                     except KeyError:
                         # Create new item
                         child = QTreeWidgetItem(parent, [str(hex(group_id)), str(hex(instance_id)), "", package_name, game_name])
@@ -474,8 +477,23 @@ class MainInspectorWindow(QMainWindow):
                         child.setData(3, Qt.ItemDataRole.UserRole, entry_to_path[entry])
                         self.items.append(child)
                         _md5_to_item[checksum] = child
+                        _package_names.append(package_name)
+                        _game_names.append(game_name)
 
-                parent.setToolTip(4, "\n".join(sorted(_game_names)))
+                _package_names = sorted(list(set(_package_names)))
+                _game_names = sorted(list(set(_game_names)))
+
+                if len(_package_names) > 1:
+                    parent.setText(3, f"{len(_package_names)} packages")
+                    parent.setToolTip(3, "\n".join(sorted(_package_names)))
+                else:
+                    parent.setText(3, _package_names[0])
+
+                if len(_game_names) > 1:
+                    parent.setText(4, f"{len(_game_names)} games")
+                    parent.setToolTip(4, "\n".join(sorted(_game_names)))
+                else:
+                    parent.setText(4, _game_names[0])
 
         # Show games under tooltips
         for item in self.items:
