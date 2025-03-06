@@ -23,7 +23,6 @@ and graphics for visual inspection outside the game.
 import glob
 import hashlib
 import os
-import re
 import signal
 import sys
 import webbrowser
@@ -678,22 +677,39 @@ class MainInspectorWindow(QMainWindow):
         while self.preload_items:
             item = self.preload_items.pop(0)
             entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
+            data: uiscript.UIScriptRoot = item.data(1, Qt.ItemDataRole.UserRole)
 
-            if entry.decompressed_size > 1024 * 1024: # Likely binary (over 1 MiB)
-                item.setDisabled(True)
+            if entry.decompressed_size > 1024 * 1024:
                 item.setText(2, "Binary data")
+                item.setDisabled(True)
                 continue
 
-            html = entry.data.decode("utf-8")
-            matches = re.findall(r'\bcaption="([^"]+)"', html)
+            if not data:
+                continue
 
-            # Use longest caption as the title
+            # Try finding elements with user-facing captions
+            matches = []
+            for iid in ["IGZWinText", "IGZWinTextEdit", "IGZWinBtn", "IGZWinFlatRect", "IGZWinBMP", "IGZWinGen"]:
+                elements = data.get_elements_by_attribute("iid", iid)
+                matches = [element.attributes.get("caption", "") for element in elements]
+
+                # Exclude captions used for technical key/value data
+                # e.g. Ignore lowercase text, and things like "kCollapsedRows=1"
+                matches = [match.replace("$NEWLINE$", " ") for match in matches if (not match.find("=") != -1 and not match.isupper()) and not match.islower() and match != ""]
+
+                if matches:
+                    break
+
             if matches:
-                # Exclude captions used for technical key/value pairs
-                matches = [match.replace("\n", "") for match in matches if (not match.find("=") != -1 and not match.isupper()) or match.islower()]
-
-                item.setText(2, max(matches, key=len))
+                # Use first found caption as the hint
+                item.setText(2, matches[0])
                 item.setToolTip(2, "\n".join(matches))
+
+                # For grouped items, update the parent
+                parent = item.parent()
+                if parent:
+                    parent.setText(2, max(matches, key=len))
+                    parent.setToolTip(2, "\n".join(matches))
 
         self.action_reload.setEnabled(True)
 
