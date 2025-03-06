@@ -109,7 +109,9 @@ class GlobalSearchDialog(QDialog):
         item.setText(1, value)
         item.setText(2, uiscript_item.text(0))
         item.setText(3, uiscript_item.text(1))
-        item.setText(4, uiscript_item.data(3, Qt.ItemDataRole.UserRole))
+
+        item.setText(4, f"{uiscript_item.text(3)} ({uiscript_item.text(4)})")
+        item.setToolTip(4, f"Found in games:\n{uiscript_item.toolTip(3)}\n\nFound in packages:\n{uiscript_item.toolTip(4)}")
 
         item.setData(0, Qt.ItemDataRole.UserRole, uiscript_item)
         item.setData(1, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))

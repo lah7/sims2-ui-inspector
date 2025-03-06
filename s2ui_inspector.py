@@ -68,7 +68,7 @@ class MainInspectorWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.items: list[QTreeWidgetItem] = []
+        self.preload_items: list[QTreeWidgetItem] = []
 
         # Layout
         self.base_widget = QWidget()
@@ -80,10 +80,10 @@ class MainInspectorWindow(QMainWindow):
         # QTreeWidgetItem data columns:
         # - 0: dbpf.Entry
         # - 1: uiscript.UIScriptRoot
-        # - 3: str: Full path to package file
+        # - 3: str: Checksum of original file
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
-        self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Package", "Appears in"])
+        self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Appears in", "Package"])
         self.uiscript_dock.tree.setColumnWidth(0, 120)
         self.uiscript_dock.tree.setColumnWidth(1, 100)
         self.uiscript_dock.tree.setColumnWidth(2, 150)
@@ -368,143 +368,117 @@ class MainInspectorWindow(QMainWindow):
 
     def load_files(self):
         """
-        Load all UI scripts found in game directories.
-        Display unique instances of UI scripts, and where they were found.
+        Load all UI scripts found in game directories or single package.
+        Group together identical instances of UI scripts, and where they were found.
         """
+        root = self.uiscript_dock.tree.invisibleRootItem()
+        if not root:
+            return
+
         self.action_reload.setEnabled(False)
-        self.status_bar.showMessage(f"Opening {len(State.file_list)} packages...")
+        self.status_bar.showMessage(f"Reading {len(State.file_list)} packages...")
         self.setCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
 
-        ui_dups: dict[tuple, list[dbpf.Entry]] = {}
-        entry_to_game: dict[dbpf.Entry, str] = {}
-        entry_to_package: dict[dbpf.Entry, str] = {}
-        entry_to_path: dict[dbpf.Entry, str] = {}
+        # Map identical group and instance IDs to the game(s) and package(s) that use them
+        class _File:
+            def __init__(self, entry: dbpf.Entry, package: str, game: str):
+                self.entry = entry
+                self.package = package
+                self.game = game
 
-        for path in State.file_list:
-            package = dbpf.DBPF(path)
-            package_name = os.path.basename(path)
+        files: dict[tuple, dict[str, list[_File]]] = {}     # (group_id, instance_id): {checksum: [File, File, ...], ...}
 
-            # Create list of UI files, but also identify duplicates across EPs/SPs
-            for entry in [entry for entry in package.entries if entry.type_id == dbpf.TYPE_UI_DATA]:
-                key = (entry.group_id, entry.instance_id)
+        for package_path in State.file_list:
+            package = dbpf.DBPF(package_path)
+            package_name = os.path.basename(package_path)
+            game_name = package.game_name
 
-                # Look up an entry by group and instance ID
-                if key in ui_dups:
-                    ui_dups[key].append(entry)
-                else:
-                    ui_dups[key] = [entry]
-
-                # Look up which game/package an entry belongs to
-                entry_to_game[entry] = package.game_name
-                entry_to_package[entry] = package_name
-                entry_to_path[entry] = path
-
-            # Graphics can be looked up by group and instance ID
-            for entry in [entry for entry in package.entries if entry.type_id == dbpf.TYPE_IMAGE]:
+            # Create lookup of graphics by group and instance ID
+            for entry in package.get_entries_by_type(dbpf.TYPE_IMAGE):
                 State.graphics[(entry.group_id, entry.instance_id)] = entry
 
-        self.status_bar.showMessage(f"Reading {len(ui_dups.keys())} UI scripts...")
+            # Create list of each instance of UI files
+            for entry in package.get_entries_by_type(dbpf.TYPE_UI_DATA):
+                key = (entry.group_id, entry.instance_id)
+                if key not in files:
+                    files[key] = {}
+
+                if entry.decompressed_size > 1024 * 1024:
+                    checksum = "Binary data"
+                else:
+                    checksum = hashlib.md5(entry.data_safe).hexdigest()
+
+                if checksum not in files[key]:
+                    files[key][checksum] = []
+
+                file = _File(entry, package_name, game_name)
+                files[key][checksum].append(file)
+
+        self.status_bar.showMessage("Populating file tree...")
         QApplication.processEvents()
 
-        # Display items by group/instance; secondary by game (if the contents differ)
-        for group_id, instance_id in ui_dups:
-            entries: list[dbpf.Entry] = ui_dups[(group_id, instance_id)]
-            key = (group_id, instance_id)
-            checksums: dict[dbpf.Entry, str] = {}
-            for entry in entries:
-                if entry.decompressed_size > 1024 * 1024:
-                    checksums[entry] = f"{group_id}{instance_id}"
-                    continue
-                checksums[entry] = hashlib.md5(entry.data_safe).hexdigest()
-            identical = len(set(checksums.values())) == 1
-            package_names = ", ".join(list(set(entry_to_package[entry] for entry in entries)))
+        def _get_name_label(games: list):
+            return f"{len(games)} games" if len(games) > 1 else games[0]
 
-            # Display a single item when UI scripts are identical across all games (or is only one)
-            if identical:
-                game_names = ", ".join(sorted(set([entry_to_game[entry] for entry in entries])))
-                entry = entries[0]
-                item = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, game_names])
+        def _get_package_label(packages: list):
+            return f"{len(packages)} packages" if len(packages) > 1 else packages[0]
+
+        # Create tree for each unique instance of UI scripts
+        for (group_id, instance_id), checksums in files.items():
+            children = []
+            package_names: list[str] = []
+            game_names: list[str] = []
+            only_one = len(checksums) == 1
+
+            for checksum, file_list in checksums.items():
+                this_package_names = sorted(set(file.package for file in file_list))
+                this_game_names = sorted(set(file.game for file in file_list))
+                package_names.extend(this_package_names)
+                game_names.extend(this_game_names)
+                entry = file_list[0].entry
+
+                item = QTreeWidgetItem([hex(group_id), hex(instance_id), "", _get_name_label(this_game_names), _get_package_label(this_package_names)])
+                item.setToolTip(3, "\n".join(this_game_names))
+                item.setToolTip(4, "\n".join(this_package_names))
                 item.setData(0, Qt.ItemDataRole.UserRole, entry)
-                item.setData(3, Qt.ItemDataRole.UserRole, entry_to_path[entry])
-                try:
-                    if entry.decompressed_size > 1024 * 1024:
-                        raise ValueError("File too large")
-                    data: uiscript.UIScriptRoot|None = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
-                    item.setData(1, Qt.ItemDataRole.UserRole, data)
+                item.setData(3, Qt.ItemDataRole.UserRole, checksum)
 
-                except (ValueError, UnicodeDecodeError):
+                if entry.decompressed_size > 1024 * 1024:
                     item.setForeground(0, QColor(Qt.GlobalColor.red))
                     item.setForeground(1, QColor(Qt.GlobalColor.red))
-                    item.setToolTip(0, "Failed to read file")
-                    item.setToolTip(1, "Failed to read file")
-                self.items.append(item)
-
-            # Display a tree item for each unique instance of the UI script
-            else:
-                parent = QTreeWidgetItem(self.uiscript_dock.tree, [str(hex(group_id)), str(hex(instance_id)), "", package_names, f"{len(entries)} games"])
-                parent.setData(0, Qt.ItemDataRole.UserRole, entries[0])
-                self.items.append(parent)
-                _md5_to_item: dict[str, QTreeWidgetItem] = {}
-                _package_names = []
-                _game_names = []
-
-                for entry in entries:
-                    checksum = checksums[entry]
-                    game_name = entry_to_game[entry]
-                    package_name = entry_to_package[entry]
-                    _game_names.append(game_name)
-
-                    try:
-                        data: uiscript.UIScriptRoot|None = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
-                    except ValueError:
-                        data = None
-
-                    try:
-                        # Append to existing item
-                        child: QTreeWidgetItem = _md5_to_item[checksum]
-                        if not package_name in child.text(3):
-                            child.setText(3, f"{child.text(3)}, {package_name}")
-                            _package_names.append(package_name)
-                        if not game_name in child.text(4):
-                            child.setText(4, f"{child.text(4)}, {game_name}")
-                            _game_names.append(game_name)
-                    except KeyError:
-                        # Create new item
-                        child = QTreeWidgetItem(parent, [str(hex(group_id)), str(hex(instance_id)), "", package_name, game_name])
-                        child.setData(0, Qt.ItemDataRole.UserRole, entry)
-                        child.setData(1, Qt.ItemDataRole.UserRole, data)
-                        child.setData(3, Qt.ItemDataRole.UserRole, entry_to_path[entry])
-                        self.items.append(child)
-                        _md5_to_item[checksum] = child
-                        _package_names.append(package_name)
-                        _game_names.append(game_name)
-
-                _package_names = sorted(list(set(_package_names)))
-                _game_names = sorted(list(set(_game_names)))
-
-                if len(_package_names) > 1:
-                    parent.setText(3, f"{len(_package_names)} packages")
-                    parent.setToolTip(3, "\n".join(sorted(_package_names)))
+                    item.setToolTip(0, "Cannot read file")
+                    item.setToolTip(1, "Cannot read file")
+                    item.setDisabled(True)
                 else:
-                    parent.setText(3, _package_names[0])
+                    try:
+                        data = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
+                        item.setData(1, Qt.ItemDataRole.UserRole, data)
+                    except (ValueError, UnicodeDecodeError):
+                        item.setForeground(0, QColor(Qt.GlobalColor.red))
+                        item.setForeground(1, QColor(Qt.GlobalColor.red))
+                        item.setToolTip(0, "Cannot parse file")
+                        item.setToolTip(1, "Cannot parse file")
+                        item.setDisabled(True)
 
-                if len(_game_names) > 1:
-                    parent.setText(4, f"{len(_game_names)} games")
-                    parent.setToolTip(4, "\n".join(sorted(_game_names)))
-                else:
-                    parent.setText(4, _game_names[0])
+                children.append(item)
 
-        # Show games under tooltips
-        for item in self.items:
-            games = item.text(4).split(", ")
-            if len(games) > 1:
-                games = sorted(games)
-                item.setToolTip(4, "\n".join(games))
-                item.setText(4, f"{len(games)} games")
+            if only_one:
+                self.uiscript_dock.tree.addTopLevelItems(children)
+                self.preload_items.append(children[0])
+                continue
 
-        total = len(ui_dups.keys())
-        self.status_bar.showMessage(f"Found {total} UI scripts", 3000)
+            game_names = sorted(set(game_names))
+            package_names = sorted(set(package_names))
+            parent = QTreeWidgetItem([hex(group_id), hex(instance_id), "", _get_name_label(game_names), _get_package_label(package_names)])
+            parent.setToolTip(3, "\n".join(game_names))
+            parent.setToolTip(4, "\n".join(package_names))
+            for child in children:
+                parent.addChild(child)
+                self.preload_items.append(child)
+            self.uiscript_dock.tree.addTopLevelItem(parent)
+
+        self.status_bar.showMessage(f"Loaded {len(self.preload_items)} UI scripts", 3000)
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
         if self.uiscript_dock.filter.is_filtered():
@@ -701,8 +675,8 @@ class MainInspectorWindow(QMainWindow):
         Continue loading files in the background to identify captions.
         """
         self.action_reload.setEnabled(False)
-        while self.items:
-            item = self.items.pop(0)
+        while self.preload_items:
+            item = self.preload_items.pop(0)
             entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
 
             if entry.decompressed_size > 1024 * 1024: # Likely binary (over 1 MiB)
