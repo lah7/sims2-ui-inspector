@@ -20,7 +20,6 @@ Rendering images is done in Python as the browser doesn't support TGA images.
 # Copyright (C) 2025 Luke Horwell <code@horwell.me>
 #
 import base64
-import hashlib
 import io
 
 import PIL.Image
@@ -36,12 +35,7 @@ def get_s2ui_element_id(element: uiscript.UIScriptElement) -> str:
     """
     Generate a unique ID for selecting this element internally between HTML/JS and PyQt.
     """
-    parts = []
-    for key, value in element.attributes.items():
-        parts.append(key)
-        parts.append(value)
-    digest = hashlib.md5("".join(parts).encode("utf-8")).hexdigest()
-    return f"s2ui_{digest}"
+    return f"s2ui_{id(element)}"
 
 
 def get_image_as_png(image_attr: str) -> io.BytesIO|None:
