@@ -208,7 +208,7 @@ class MainInspectorWindow(QMainWindow):
 
         self.menu_edit.addSeparator()
         self.action_global_search = QAction(QIcon.fromTheme("edit-find"), "Find References...")
-        self.action_global_search.setShortcut(QKeySequence.fromString("Ctrl+F"))
+        self.action_global_search.setShortcut(QKeySequence.fromString("Ctrl+Shift+F"))
         self.action_global_search.triggered.connect(self.open_global_search)
         self.menu_edit.addAction(self.action_global_search)
 
