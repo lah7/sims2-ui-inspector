@@ -54,4 +54,5 @@ html, body {
     flex: 1;
     font-family: inherit;
     overflow: hidden;
+    overflow-y: auto;
 }

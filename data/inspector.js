@@ -89,16 +89,17 @@ function _initialRender() {
         // Caption / Text
         const captionIIDsShown = ["IGZWinText", "GZWinTextEdit", "IGZWinBtn"];
         if (caption && !noShowCaption && caption.search("=") === -1 && captionIIDsShown.includes(iid)) {
-            element.innerHTML = element.getAttribute("caption").replaceAll("$NEWLINE$", "<br>");
+            element.innerHTML = element.getAttribute("caption").replaceAll("\\r\\n", "<br>");
             element.style.textAlign = align;
         }
 
         // Input
         if (iid === "IGZWinTextEdit") {
+            const initvalue = element.getAttribute("initvalue") || element.getAttribute("caption") || "";
             const input = document.createElement("textarea");
             input.type = "text";
             input.style.resize = "none";
-            input.value = element.getAttribute("caption");
+            input.value = initvalue.replaceAll("\\r\\n", "\n");
             element.style.display = "flex";
             element.appendChild(input);
         }

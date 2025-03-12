@@ -718,7 +718,7 @@ class MainInspectorWindow(QMainWindow):
 
                 # Exclude captions used for technical key/value data
                 # e.g. Ignore lowercase text, and things like "kCollapsedRows=1"
-                matches = [match.replace("$NEWLINE$", " ") for match in matches if (not match.find("=") != -1 and not match.isupper()) and not match.islower() and match != ""]
+                matches = [match.replace("\\r\\n", " ") for match in matches if (not match.find("=") != -1 and not match.isupper()) and not match.islower() and match != ""]
 
                 if matches:
                     break
