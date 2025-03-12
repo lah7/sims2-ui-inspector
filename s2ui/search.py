@@ -147,21 +147,25 @@ class GlobalSearchDialog(QDialog):
             for element in root.get_all_elements():
                 assert isinstance(element, uiscript.UIScriptElement)
 
-                for key, value in element.attributes.items():
-                    found_attrib = False
-                    found_value = False
+                for key, values in element.attributes.items():
+                    if isinstance(values, str):
+                        values = [values]
 
-                    if text_attrib and text_attrib in key.lower():
-                        found_attrib = True
+                    for value in values:
+                        found_attrib = False
+                        found_value = False
 
-                    if text_value and text_value in value.lower():
-                        found_value = True
+                        if text_attrib and text_attrib in key.lower():
+                            found_attrib = True
 
-                    if text_attrib and text_value and not all([found_attrib, found_value]):
-                        continue
+                        if text_value and text_value in value.lower():
+                            found_value = True
 
-                    if found_attrib or found_value:
-                        self._add_result(item, element, key, value, found_attrib, found_value)
+                        if text_attrib and text_value and not all([found_attrib, found_value]):
+                            continue
+
+                        if found_attrib or found_value:
+                            self._add_result(item, element, key, value, found_attrib, found_value)
 
         if not self.results.topLevelItemCount():
             item = QTreeWidgetItem()

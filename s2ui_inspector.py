@@ -550,8 +550,16 @@ class MainInspectorWindow(QMainWindow):
             iid = element.attributes.get("iid", "Unknown")
             caption = element.attributes.get("caption", "")
             element_id = element.attributes.get("id", "")
-            xpos, ypos, width, height = element.attributes.get("area", "(0,0,0,0)").strip("()").split(",")
+            area = element.attributes.get("area", "(0,0,0,0)")
             image_attr = element.attributes.get("image", "")
+
+            assert isinstance(iid, str)
+            assert isinstance(caption, str)
+            assert isinstance(element_id, str)
+            assert isinstance(area, str)
+            assert isinstance(image_attr, str)
+
+            xpos, ypos, width, height = area.strip("()").split(",")
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
             item.setData(0, Qt.ItemDataRole.UserRole, element)
@@ -634,7 +642,7 @@ class MainInspectorWindow(QMainWindow):
 
         self.properties_dock.tree.clear()
 
-        for key, value in element.attributes.items():
+        def _add_property(key: str, value: str, has_duplicates: bool):
             prop = QTreeWidgetItem(self.properties_dock.tree, [key, value])
             prop.setToolTip(1, value)
 
@@ -646,6 +654,7 @@ class MainInspectorWindow(QMainWindow):
                         QTreeWidgetItem(prop, [name, value])
                 case "image":
                     image_attr = element.attributes.get("image", "")
+                    assert isinstance(image_attr, str)
                     if image_attr:
                         _group_id, _instance_id = image_attr[1:-1].split(",")
                         group_id = int(_group_id, 16)
@@ -664,7 +673,18 @@ class MainInspectorWindow(QMainWindow):
                 pixmap.fill(QColor.fromRgb(int(_color[0]), int(_color[1]), int(_color[2])))
                 prop.setIcon(1, QIcon(pixmap))
 
+            if has_duplicates:
+                for c in range(0, prop.columnCount()):
+                    prop.setForeground(c, Qt.GlobalColor.yellow)
+
             prop.setExpanded(True)
+
+        for key, value in element.attributes.items():
+            if isinstance(value, str):
+                _add_property(key, value, False)
+            elif isinstance(value, list):
+                for v in value:
+                    _add_property(key, v, True)
 
         if self.properties_dock.filter.is_filtered():
             self.properties_dock.filter.refresh_tree()
@@ -691,7 +711,10 @@ class MainInspectorWindow(QMainWindow):
             matches = []
             for iid in ["IGZWinText", "IGZWinTextEdit", "IGZWinBtn", "IGZWinFlatRect", "IGZWinBMP", "IGZWinGen"]:
                 elements = data.get_elements_by_attribute("iid", iid)
-                matches = [element.attributes.get("caption", "") for element in elements]
+                for element in elements:
+                    caption = element.attributes.get("caption", "")
+                    if isinstance(caption, str):
+                        matches.append(caption)
 
                 # Exclude captions used for technical key/value data
                 # e.g. Ignore lowercase text, and things like "kCollapsedRows=1"
