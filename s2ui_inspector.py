@@ -174,46 +174,49 @@ class MainInspectorWindow(QMainWindow):
         self.setMenuBar(self.menu_bar)
 
         # === File ===
-        self.menu_file = QMenu("File")
+        self.menu_file = QMenu("&File")
         self.menu_bar.addMenu(self.menu_file)
 
-        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "Open Game Folder...")
+        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "&Open Game Folder...")
         self.action_open_dir.setShortcut(QKeySequence.StandardKey.Open)
         self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
         self.menu_file.addAction(self.action_open_dir)
 
-        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open Single Package...")
+        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open &Single Package...")
+        self.action_open_pkg.setShortcut(QKeySequence.fromString("Ctrl+Shift+O"))
         self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
         self.menu_file.addAction(self.action_open_pkg)
 
         self.menu_file.addSeparator()
-        self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "Reload Packages")
+        self.action_reload = QAction(QIcon.fromTheme("view-refresh"), "&Reload Packages")
+        self.action_reload.setShortcut(QKeySequence.StandardKey.Refresh)
         self.action_reload.triggered.connect(self.reload_files)
         self.menu_file.addAction(self.action_reload)
 
         self.menu_file.addSeparator()
-        self.action_exit = QAction(QIcon.fromTheme("application-exit"), "Exit")
+        self.action_exit = QAction(QIcon.fromTheme("application-exit"), "&Exit")
+        self.action_exit.setShortcut(QKeySequence.StandardKey.Quit)
         self.action_exit.triggered.connect(self.close)
         self.menu_file.addAction(self.action_exit)
 
         # === Edit ===
-        self.menu_edit = QMenu("Edit")
+        self.menu_edit = QMenu("&Edit")
         self.menu_bar.addMenu(self.menu_edit)
 
-        self.action_element_visible = QAction(QIcon.fromTheme("view-visible"), "Show Element")
+        self.action_element_visible = QAction(QIcon.fromTheme("view-visible"), "Show &Element")
         self.action_element_visible.setCheckable(True)
         self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
 
         self.menu_edit.addSeparator()
-        self.action_global_search = QAction(QIcon.fromTheme("edit-find"), "Find References...")
+        self.action_global_search = QAction(QIcon.fromTheme("edit-find"), "&Find References...")
         self.action_global_search.setShortcut(QKeySequence.fromString("Ctrl+Shift+F"))
         self.action_global_search.triggered.connect(self.open_global_search)
         self.menu_edit.addAction(self.action_global_search)
 
         # === View ===
-        self.menu_view = QMenu("View")
+        self.menu_view = QMenu("&View")
         self.menu_bar.addMenu(self.menu_view)
         self._actions = [] # To prevent garbage collection
 
@@ -228,12 +231,12 @@ class MainInspectorWindow(QMainWindow):
 
         self.menu_view.addSeparator()
 
-        self.action_zoom_in = QAction(QIcon.fromTheme("zoom-in"), "Zoom In")
+        self.action_zoom_in = QAction(QIcon.fromTheme("zoom-in"), "Zoom &In")
         self.action_zoom_in.setShortcut(QKeySequence.StandardKey.ZoomIn)
         self.action_zoom_in.triggered.connect(lambda: self.webview.setZoomFactor(self.webview.zoomFactor() + 0.1))
         self.menu_view.addAction(self.action_zoom_in)
 
-        self.action_zoom_out = QAction(QIcon.fromTheme("zoom-out"), "Zoom Out")
+        self.action_zoom_out = QAction(QIcon.fromTheme("zoom-out"), "Zoom &Out")
         self.action_zoom_out.setShortcut(QKeySequence.StandardKey.ZoomOut)
         self.action_zoom_out.triggered.connect(lambda: self.webview.setZoomFactor(self.webview.zoomFactor() - 0.1))
         self.menu_view.addAction(self.action_zoom_out)
@@ -250,10 +253,10 @@ class MainInspectorWindow(QMainWindow):
         self.menu_view.addSeparator()
 
         # === Tools ===
-        self.menu_tools = QMenu("Tools")
+        self.menu_tools = QMenu("&Tools")
         self.menu_bar.addMenu(self.menu_tools)
 
-        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View Original Code")
+        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View &Original Code")
         self.action_script_src.triggered.connect(self.open_original_code)
         self.action_script_src.setDisabled(True)
         self.menu_tools.addAction(self.action_script_src)
@@ -282,23 +285,23 @@ class MainInspectorWindow(QMainWindow):
         self.menu_tools.addAction(self.action_debug_inspect)
 
         # === Help ===
-        self.menu_help = QMenu("Help")
+        self.menu_help = QMenu("&Help")
         self.menu_bar.addMenu(self.menu_help)
 
-        self.action_online = QAction(QIcon.fromTheme("globe"), "View on GitHub")
+        self.action_online = QAction(QIcon.fromTheme("globe"), "View on &GitHub")
         self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
         self.menu_help.addAction(self.action_online)
 
-        self.action_releases = QAction("Check Releases")
+        self.action_releases = QAction("Check &Releases")
         self.action_releases.triggered.connect(lambda: webbrowser.open(f"{PROJECT_URL}/releases"))
         self.menu_help.addAction(self.action_releases)
 
         self.menu_help.addSeparator()
-        self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About Qt")
+        self.action_about_qt = QAction(QIcon.fromTheme("qtcreator"), "About &Qt")
         self.action_about_qt.triggered.connect(lambda: QMessageBox.aboutQt(self))
         self.menu_help.addAction(self.action_about_qt)
 
-        self.action_about_app = QAction(QIcon.fromTheme("help-about"), "About S2UI Inspector")
+        self.action_about_app = QAction(QIcon.fromTheme("help-about"), "&About S2UI Inspector")
         self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
         self.menu_help.addAction(self.action_about_app)
 

@@ -19,6 +19,7 @@ Module for Qt widgets used in the UI.
 #
 
 from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
                              QMainWindow, QToolBar, QTreeWidget,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -87,6 +88,16 @@ class FilterBox(QLineEdit):
         self.setPlaceholderText("Filter...")
         self.setClearButtonEnabled(True)
         self.textChanged.connect(self.update_tree)
+
+        # CTRL+F focuses the input box
+        self.tree_shortcut = QShortcut(QKeySequence.StandardKey.Find, self.tree_widget)
+        self.tree_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self.tree_shortcut.activated.connect(self.setFocus)
+
+        # ESC clears the filter
+        self.esc_shortcut = QShortcut(QKeySequence.StandardKey.Cancel, self)
+        self.esc_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+        self.esc_shortcut.activated.connect(self.clear)
 
     def _reset_tree(self):
         """
