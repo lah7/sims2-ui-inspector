@@ -333,6 +333,9 @@ class MainInspectorWindow(QMainWindow):
                 self.discover_files(browser.selectedFiles()[0])
             else:
                 State.file_list = browser.selectedFiles()
+
+            self.uiscript_dock.tree.setColumnHidden(3, not open_dir)
+            self.uiscript_dock.tree.setColumnHidden(4, not open_dir)
             self.load_files()
 
         self.setStatusTip("No files opened.")
