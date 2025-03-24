@@ -123,7 +123,7 @@ class MainInspectorWindow(QMainWindow):
         # Context menus
         self.uiscript_dock.setup_context_menu([self.action_script_src, "|", self.action_copy_ids, self.action_copy_group_id, self.action_copy_instance_id])
         self.elements_dock.setup_context_menu([self.action_element_visible, "|", self.action_copy_element_class, self.action_copy_element_caption, self.action_copy_element_id, self.action_copy_element_pos])
-        self.properties_dock.setup_context_menu([self.action_copy_attribute, self.action_copy_value])
+        self.properties_dock.setup_context_menu([self.action_copy_attribute, self.action_copy_value, "|", self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue])
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
@@ -252,6 +252,19 @@ class MainInspectorWindow(QMainWindow):
         self.action_copy_value = QAction(QIcon.fromTheme("edit-copy"), "Copy &Value")
         self.action_copy_value.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 1))
         self.menu_edit.addAction(self.action_copy_value)
+
+        # ... Only shown in context menu
+        self.action_similar_attrib = QAction(QIcon.fromTheme("edit-find"), "Find elements with this &attribute")
+        self.action_similar_attrib.triggered.connect(lambda: self.open_global_search(True, False))
+        self.action_similar_attrib.setDisabled(True)
+
+        self.action_similar_value = QAction(QIcon.fromTheme("edit-find"), "Find elements with this &value")
+        self.action_similar_value.triggered.connect(lambda: self.open_global_search(False, True))
+        self.action_similar_value.setDisabled(True)
+
+        self.action_similar_attribvalue = QAction(QIcon.fromTheme("edit-find"), "Find elements with same attribute/value")
+        self.action_similar_attribvalue.triggered.connect(lambda: self.open_global_search(True, True))
+        self.action_similar_attribvalue.setDisabled(True)
 
         # ... Global
         self.menu_edit.addSeparator()
@@ -651,7 +664,7 @@ class MainInspectorWindow(QMainWindow):
         if first_item:
             self.elements_dock.tree.setCurrentItem(first_item)
 
-        for action in self.uiscript_dock.context_menu.actions() + self.properties_dock.context_menu.actions():
+        for action in self.uiscript_dock.context_menu.actions() + self.properties_dock.context_menu.actions() + [self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue]:
             action.setEnabled(True)
 
     def hover_element(self, item: QTreeWidgetItem):
@@ -873,13 +886,28 @@ class MainInspectorWindow(QMainWindow):
                 else:
                     child.setForeground(c, Qt.GlobalColor.gray)
 
-    def open_global_search(self):
+    def open_global_search(self, prefill_attrib=False, prefill_value=False):
         """
         Open a dialog to search for data across all UI scripts.
+        Optionally, with prefilled attribute and/or value.
         """
-        self.search_dialog.show()
-        self.search_dialog.raise_()
-        self.search_dialog.activateWindow()
+        if not self.search_dialog.isVisible():
+            self.search_dialog.show()
+            self.search_dialog.raise_()
+            self.search_dialog.activateWindow()
+
+        current_item = self.properties_dock.tree.currentItem()
+        if current_item:
+            if prefill_attrib and prefill_value:
+                self.search_dialog.search_box_attrib.setText(current_item.text(0))
+                self.search_dialog.search_box_value.setText(current_item.text(1))
+            elif prefill_attrib:
+                self.search_dialog.search_box_attrib.setText(current_item.text(0))
+                self.search_dialog.search_box_value.setText("")
+            elif prefill_value:
+                self.search_dialog.search_box_attrib.setText("")
+                self.search_dialog.search_box_value.setText(current_item.text(1))
+            self.search_dialog.search()
 
 
 if __name__ == "__main__":
