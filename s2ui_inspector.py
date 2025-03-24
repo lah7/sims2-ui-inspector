@@ -28,8 +28,8 @@ import sys
 import webbrowser
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import (QAction, QColor, QCursor, QFontDatabase, QIcon,
-                         QImage, QKeySequence, QPainter, QPixmap)
+from PyQt6.QtGui import (QAction, QColor, QFontDatabase, QIcon, QImage,
+                         QKeySequence, QPainter, QPixmap)
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -90,8 +90,6 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.tree.setColumnWidth(4, 100)
         self.uiscript_dock.tree.setSortingEnabled(True)
         self.uiscript_dock.tree.currentItemChanged.connect(self.inspect_ui_file)
-        self.uiscript_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.uiscript_dock.tree.customContextMenuRequested.connect(lambda: self.menu_tools.exec(QCursor.pos()))
 
         # Dock: Elements
         # QTreeWidgetItem data columns:
@@ -122,17 +120,16 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.toolbar.addAction(self.action_copy_ids)
         self.elements_dock.toolbar.addAction(self.action_element_visible)
 
-        # Right click actions
-        self.elements_menu = QMenu()
-        self.elements_menu.addAction(self.action_element_visible)
-        self.elements_dock.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.elements_dock.tree.customContextMenuRequested.connect(lambda: self.elements_menu.exec(QCursor.pos()))
+        # Context menus
+        self.uiscript_dock.setup_context_menu([self.action_script_src, "|", self.action_copy_ids, self.action_copy_group_id, self.action_copy_instance_id])
+        self.elements_dock.setup_context_menu([self.action_element_visible, "|", self.action_copy_element_class, self.action_copy_element_caption, self.action_copy_element_id, self.action_copy_element_pos])
+        self.properties_dock.setup_context_menu([self.action_copy_attribute, self.action_copy_value])
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
         self.status_bar.showMessage("Loading...")
 
-        # UI rendering
+        # UI renderer (HTML-based)
         self.webview = QWebEngineView()
         self.webview.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.webview.setHtml("<style>body { background: #003062; }</style>")
@@ -142,7 +139,7 @@ class MainInspectorWindow(QMainWindow):
         # The bridge allows the web view to communicate with Python
         self.channel = QWebChannel()
         self.webview_page.setWebChannel(self.channel)
-        self.bridge = Bridge(self.elements_dock.tree, self.elements_menu)
+        self.bridge = Bridge(self.elements_dock.tree, self.elements_dock.context_menu)
         self.channel.registerObject("python", self.bridge)
 
         # Features
@@ -152,6 +149,7 @@ class MainInspectorWindow(QMainWindow):
         self.resize(1424, 768)
         self.setWindowTitle("S2UI Inspector")
         self.setWindowIcon(QIcon(os.path.abspath(get_resource("icon.ico"))))
+        self.clear_state()
         self.show()
         self.status_bar.showMessage("Ready")
         QApplication.processEvents()
@@ -203,12 +201,59 @@ class MainInspectorWindow(QMainWindow):
         self.menu_edit = QMenu("&Edit")
         self.menu_bar.addMenu(self.menu_edit)
 
+        # ... for UI Script dock
+        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "Show &Original Code")
+        self.action_script_src.triggered.connect(self.open_original_code)
+        self.menu_edit.addAction(self.action_script_src)
+
+        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy Group and Instance ID")
+        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
+        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)} {hex(State.current_instance_id)}"))
+        self.menu_edit.addAction(self.action_copy_ids)
+
+        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &Group ID")
+        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
+        self.menu_edit.addAction(self.action_copy_group_id)
+
+        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &Instance ID")
+        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
+        self.menu_edit.addAction(self.action_copy_instance_id)
+
+        # ... for Elements dock
+        self.menu_edit.addSeparator()
         self.action_element_visible = QAction(QIcon.fromTheme("view-visible"), "Show &Element")
         self.action_element_visible.setCheckable(True)
         self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
 
+        self.action_copy_element_class = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &Class")
+        self.action_copy_element_class.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
+        self.menu_edit.addAction(self.action_copy_element_class)
+
+        self.action_copy_element_caption = QAction(QIcon.fromTheme("edit-copy"), "Copy Element C&aption")
+        self.action_copy_element_caption.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 1))
+        self.menu_edit.addAction(self.action_copy_element_caption)
+
+        self.action_copy_element_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &ID")
+        self.action_copy_element_id.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 2))
+        self.menu_edit.addAction(self.action_copy_element_id)
+
+        self.action_copy_element_pos = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &Position")
+        self.action_copy_element_pos.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 3))
+        self.menu_edit.addAction(self.action_copy_element_pos)
+
+        # ... for Properties dock
+        self.menu_edit.addSeparator()
+        self.action_copy_attribute = QAction(QIcon.fromTheme("edit-copy"), "Copy &Attribute")
+        self.action_copy_attribute.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 0))
+        self.menu_edit.addAction(self.action_copy_attribute)
+
+        self.action_copy_value = QAction(QIcon.fromTheme("edit-copy"), "Copy &Value")
+        self.action_copy_value.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 1))
+        self.menu_edit.addAction(self.action_copy_value)
+
+        # ... Global
         self.menu_edit.addSeparator()
         self.action_global_search = QAction(QIcon.fromTheme("edit-find"), "&Find References...")
         self.action_global_search.setShortcut(QKeySequence.fromString("Ctrl+Shift+F"))
@@ -252,37 +297,12 @@ class MainInspectorWindow(QMainWindow):
 
         self.menu_view.addSeparator()
 
-        # === Tools ===
-        self.menu_tools = QMenu("&Tools")
-        self.menu_bar.addMenu(self.menu_tools)
-
-        self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "View &Original Code")
-        self.action_script_src.triggered.connect(self.open_original_code)
-        self.action_script_src.setDisabled(True)
-        self.menu_tools.addAction(self.action_script_src)
-
-        self.menu_copy_ids = QMenu()
-
-        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Group ID")
-        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
-        self.menu_copy_ids.addAction(self.action_copy_group_id)
-
-        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Instance ID")
-        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
-        self.menu_copy_ids.addAction(self.action_copy_instance_id)
-
-        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy IDs")
-        self.action_copy_ids.setMenu(self.menu_copy_ids)
-        self.action_copy_ids.setToolTip("Copy Group ID and Instance ID to clipboard")
-        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
-        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)}_{hex(State.current_instance_id)}"))
-        self.action_copy_ids.setDisabled(True)
-        self.menu_tools.addAction(self.action_copy_ids)
-
-        self.menu_tools.addSeparator()
-        self.action_debug_inspect = QAction(QIcon.fromTheme("tools-symbolic"), "Debug Web View")
+        self.debug_menu = QMenu("&Debug Tools")
+        self.debug_menu.setIcon(QIcon.fromTheme("tools"))
+        self.menu_view.addMenu(self.debug_menu)
+        self.action_debug_inspect = QAction(QIcon.fromTheme("tools-symbolic"), "HTML Web Inspector")
         self.action_debug_inspect.triggered.connect(self.open_web_dev_tools)
-        self.menu_tools.addAction(self.action_debug_inspect)
+        self.debug_menu.addAction(self.action_debug_inspect)
 
         # === Help ===
         self.menu_help = QMenu("&Help")
@@ -292,7 +312,7 @@ class MainInspectorWindow(QMainWindow):
         self.action_online.triggered.connect(lambda: webbrowser.open(PROJECT_URL))
         self.menu_help.addAction(self.action_online)
 
-        self.action_releases = QAction("Check &Releases")
+        self.action_releases = QAction(QIcon.fromTheme("globe"), "View &Releases")
         self.action_releases.triggered.connect(lambda: webbrowser.open(f"{PROJECT_URL}/releases"))
         self.menu_help.addAction(self.action_releases)
 
@@ -315,6 +335,12 @@ class MainInspectorWindow(QMainWindow):
             self.status_bar.showMessage(f"Text copied: {text}", 5000)
         else:
             self.status_bar.showMessage("Unable to copy to clipboard")
+
+    def _copy_tree_item_to_clipboard(self, tree: QTreeWidget, column: int):
+        """Copy the selected item's text to the clipboard"""
+        item = tree.currentItem()
+        if item:
+            self._copy_to_clipboard(item.text(column))
 
     def browse(self, open_dir: bool):
         """
@@ -348,8 +374,12 @@ class MainInspectorWindow(QMainWindow):
         Reset the inspector ready to open new files.
         """
         self.uiscript_dock.tree.clear()
-        self.action_script_src.setDisabled(True)
-        self.action_copy_ids.setDisabled(True)
+
+        for action in self.menu_edit.actions():
+            if action.isSeparator():
+                continue
+            action.setEnabled(False)
+        self.action_global_search.setEnabled(True)
 
         State.graphics = {}
         State.current_group_id = 0x0
@@ -621,6 +651,9 @@ class MainInspectorWindow(QMainWindow):
         if first_item:
             self.elements_dock.tree.setCurrentItem(first_item)
 
+        for action in self.uiscript_dock.context_menu.actions() + self.properties_dock.context_menu.actions():
+            action.setEnabled(True)
+
     def hover_element(self, item: QTreeWidgetItem):
         """
         Highlight the hovered element in the webview.
@@ -638,8 +671,9 @@ class MainInspectorWindow(QMainWindow):
         if not item:
             return
 
-        self.action_script_src.setEnabled(True)
-        self.action_copy_ids.setEnabled(True)
+        for action in self.elements_dock.context_menu.actions():
+            action.setEnabled(True)
+
         self.action_element_visible.setChecked(item.data(1, Qt.ItemDataRole.UserRole))
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)

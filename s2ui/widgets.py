@@ -19,9 +19,9 @@ Module for Qt widgets used in the UI.
 #
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QCursor, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
-                             QMainWindow, QToolBar, QTreeWidget,
+                             QMainWindow, QMenu, QToolBar, QTreeWidget,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 
@@ -62,6 +62,7 @@ class DockTree(QDockWidget):
         self.tree = QTreeWidget()
         self.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.filter = FilterBox(self.tree)
+        self.context_menu = QMenu()
 
         # Toolbar
         self.toolbar = QToolBar(self)
@@ -75,6 +76,16 @@ class DockTree(QDockWidget):
 
         self.base_layout.addWidget(self.toolbar)
         self.base_layout.addWidget(self.tree)
+
+    def setup_context_menu(self, actions: list[QAction|str]):
+        """Set up the context menu when right clicking on a tree item."""
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        for action in actions:
+            if isinstance(action, str) and action == "|":
+                self.context_menu.addSeparator()
+                continue
+            self.context_menu.addAction(action)
+        self.tree.customContextMenuRequested.connect(lambda: self.context_menu.exec(QCursor.pos()))
 
 
 class FilterBox(QLineEdit):
