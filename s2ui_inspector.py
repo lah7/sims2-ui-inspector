@@ -124,6 +124,7 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.setup_context_menu([self.action_script_src, "|", self.action_copy_ids, self.action_copy_group_id, self.action_copy_instance_id])
         self.elements_dock.setup_context_menu([self.action_element_visible, "|", self.action_copy_element_class, self.action_copy_element_caption, self.action_copy_element_id, self.action_copy_element_pos])
         self.properties_dock.setup_context_menu([self.action_copy_attribute, self.action_copy_value, "|", self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue])
+        self.context_menu_only_actions = [self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue]
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
@@ -132,7 +133,8 @@ class MainInspectorWindow(QMainWindow):
         # UI renderer (HTML-based)
         self.webview = QWebEngineView()
         self.webview.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-        self.webview.setHtml("<style>body { background: #003062; }</style>")
+        self.default_html = "<style>body { background: #003062; }</style>"
+        self.webview.setHtml(self.default_html)
         self.webview_page = self.webview.page() or QWebEnginePage() # 'Or' to satisfy strong type checking
         self.base_layout.addWidget(self.webview)
 
@@ -388,7 +390,7 @@ class MainInspectorWindow(QMainWindow):
         """
         self.uiscript_dock.tree.clear()
 
-        for action in self.menu_edit.actions():
+        for action in self.menu_edit.actions() + self.context_menu_only_actions:
             if action.isSeparator():
                 continue
             action.setEnabled(False)
@@ -538,6 +540,9 @@ class MainInspectorWindow(QMainWindow):
     def reload_files(self):
         """Reload all files again from disk"""
         self.clear_state()
+        self.elements_dock.tree.clear()
+        self.properties_dock.tree.clear()
+        self.webview.setHtml(self.default_html)
         self.load_files()
 
     def _uiscript_to_html(self, root: uiscript.UIScriptRoot) -> str:
@@ -664,7 +669,7 @@ class MainInspectorWindow(QMainWindow):
         if first_item:
             self.elements_dock.tree.setCurrentItem(first_item)
 
-        for action in self.uiscript_dock.context_menu.actions() + self.properties_dock.context_menu.actions() + [self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue]:
+        for action in self.uiscript_dock.context_menu.actions() + self.properties_dock.context_menu.actions() + self.context_menu_only_actions:
             action.setEnabled(True)
 
     def hover_element(self, item: QTreeWidgetItem):
