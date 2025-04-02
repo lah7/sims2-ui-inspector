@@ -391,9 +391,6 @@ class MainInspectorWindow(QMainWindow):
             self.uiscript_dock.tree.setColumnHidden(4, not open_dir)
             self.load_files()
 
-        if not State.file_list:
-            QMessageBox.warning(self, "No files found", "No UI files for The Sims 2 were found in the selected folder.")
-
     def clear_state(self):
         """
         Reset the inspector ready to open new files.
@@ -409,12 +406,14 @@ class MainInspectorWindow(QMainWindow):
         State.graphics = {}
         State.current_group_id = 0x0
         State.current_instance_id = 0x0
+        State.game_dir = ""
 
+        self.setWindowTitle("S2UI Inspector")
         self.search_dialog.reset()
 
     def discover_files(self, path: str):
         """
-        Gather a file list of packages containing UI scripts.
+        Gather a file list of packages containing UI scripts in a game directory.
         """
         self.status_bar.showMessage(f"Discovering files: {path}")
         QApplication.processEvents()
@@ -428,6 +427,8 @@ class MainInspectorWindow(QMainWindow):
 
         if State.file_list:
             self.config.set_last_opened_dir(path)
+            State.game_dir = path
+
     def load_files(self):
         """
         Load all UI scripts found in game directories or single package.
@@ -437,9 +438,19 @@ class MainInspectorWindow(QMainWindow):
         if not root:
             return
 
+        if not State.file_list:
+            self.setWindowTitle("S2UI Inspector")
+            QMessageBox.warning(self, "No files found", "No UI files for The Sims 2 were found in the selected folder.")
+            return
+
         self.action_reload.setEnabled(False)
         self.status_bar.showMessage(f"Reading {len(State.file_list)} packages...")
         self.setCursor(Qt.CursorShape.WaitCursor)
+        if State.game_dir:
+            self.setWindowTitle(f"S2UI Inspector — {State.game_dir}")
+        else:
+            self.setWindowTitle(f"S2UI Inspector — {State.file_list[0]}")
+
         QApplication.processEvents()
 
         # Map identical group and instance IDs to the game(s) and package(s) that use them
