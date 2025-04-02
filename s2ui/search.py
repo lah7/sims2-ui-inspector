@@ -35,6 +35,7 @@ class GlobalSearchDialog(QDialog):
     """
     def __init__(self, parent: QMainWindow, uiscripts_tree: QTreeWidget, elements_tree: QTreeWidget, attributes_tree: QTreeWidget):
         super().__init__(parent)
+        self.main_window = parent
         self.uiscripts_tree = uiscripts_tree
         self.elements_tree = elements_tree
         self.attributes_tree = attributes_tree
@@ -206,6 +207,9 @@ class GlobalSearchDialog(QDialog):
                     self.attributes_tree.setCurrentItem(child)
                     self.attributes_tree.scrollToItem(child)
                     break
+
+        self.main_window.raise_()
+        self.main_window.activateWindow()
 
     def reset(self):
         """Reset the state of the search dialog"""
