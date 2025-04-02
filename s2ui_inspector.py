@@ -27,6 +27,7 @@ import signal
 import sys
 import webbrowser
 
+import setproctitle
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import (QAction, QColor, QFontDatabase, QIcon, QImage,
                          QKeySequence, QPainter, QPixmap)
@@ -916,6 +917,8 @@ class MainInspectorWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    setproctitle.setproctitle("s2ui-inspector")
+
     # CTRL+C to exit
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 

@@ -2,6 +2,7 @@ Pillow
 PyQt6
 PyQt6-WebEngine
 requests
+setproctitle
 
 # Build only
 cx_Freeze
