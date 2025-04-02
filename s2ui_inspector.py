@@ -391,7 +391,8 @@ class MainInspectorWindow(QMainWindow):
             self.uiscript_dock.tree.setColumnHidden(4, not open_dir)
             self.load_files()
 
-        self.setStatusTip("No files opened.")
+        if not State.file_list:
+            QMessageBox.warning(self, "No files found", "No UI files for The Sims 2 were found in the selected folder.")
 
     def clear_state(self):
         """
