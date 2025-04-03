@@ -40,6 +40,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QSplitter, QStatusBar, QTextEdit, QTreeWidget,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
+import s2ui.config
 import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
@@ -69,6 +70,7 @@ class MainInspectorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.preload_items: list[QTreeWidgetItem] = []
+        self.config = s2ui.config.Preferences()
 
         # Layout
         self.base_widget = QWidget()
@@ -157,8 +159,11 @@ class MainInspectorWindow(QMainWindow):
         self.status_bar.showMessage("Ready")
         QApplication.processEvents()
 
-        # Auto load file/folder when passed as a command line argument
+        # Load initial package/game folder
+        last_opened_dir = self.config.get_last_opened_dir()
+
         if len(sys.argv) > 1:
+            # When passed as a command line argument
             path = sys.argv[1]
             if os.path.exists(path) and os.path.isdir(path):
                 self.discover_files(path)
@@ -166,6 +171,9 @@ class MainInspectorWindow(QMainWindow):
             elif os.path.exists(path):
                 State.file_list = [path]
                 self.load_files()
+        elif last_opened_dir and os.path.exists(last_opened_dir) and os.path.isdir(last_opened_dir):
+            self.discover_files(last_opened_dir)
+            self.load_files()
         else:
             self.browse(open_dir=True)
 
@@ -417,6 +425,8 @@ class MainInspectorWindow(QMainWindow):
             for filename in ["ui.package", "CaSIEUI.data"]:
                 State.file_list += glob.glob(f"{path}/**/{filename}", recursive=True)
 
+        if State.file_list:
+            self.config.set_last_opened_dir(path)
     def load_files(self):
         """
         Load all UI scripts found in game directories or single package.
