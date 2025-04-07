@@ -374,7 +374,7 @@ class MainInspectorWindow(QMainWindow):
         """
         Show the file/folder dialog to select a package file.
         """
-        browser = QFileDialog(self, "Open Game Folder" if open_dir else "Open Package File")
+        browser = QFileDialog(self, "Where is The Sims 2 (and expansions) installed?" if open_dir else "Open Package File")
         if open_dir:
             browser.setFileMode(QFileDialog.FileMode.Directory)
             browser.setViewMode(QFileDialog.ViewMode.List)
