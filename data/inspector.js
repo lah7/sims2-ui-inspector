@@ -131,6 +131,11 @@ function _initialRender() {
                 style.sheet.insertRule(rule.join(" "), style.sheet.cssRules.length);
             });
         }
+
+        // Fill colour
+        if (iid === "IGZWinBMP" && !image && _fillcolor) {
+            element.style.backgroundColor = _fillcolor;
+        }
     });
 }
 
