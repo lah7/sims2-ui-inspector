@@ -1,6 +1,6 @@
 html, body {
-    font-family: "Benguiat Gothic", "ITC Benguiat Gothic", "Benguiat Gothic Regular", "ITC Benguiat Gothic Regular", "Varela Round", sans-serif;
     background: #01233e;
+    font-family: sans-serif;
     font-weight: normal;
     font-size: 13px;
 }
@@ -53,6 +53,7 @@ html, body {
     outline: none;
     flex: 1;
     font-family: inherit;
+    font-size: inherit;
     overflow: hidden;
     overflow-y: auto;
 }

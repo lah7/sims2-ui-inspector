@@ -41,6 +41,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import s2ui.config
+import s2ui.fontstyles
 import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
@@ -69,8 +70,9 @@ class MainInspectorWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.preload_items: list[QTreeWidgetItem] = []
         self.config = s2ui.config.Preferences()
+        self.fonts: dict[str, s2ui.fontstyles.FontStyle] = {}
+        self.preload_items: list[QTreeWidgetItem] = []
 
         # Layout
         self.base_widget = QWidget()
@@ -167,12 +169,14 @@ class MainInspectorWindow(QMainWindow):
             path = sys.argv[1]
             if os.path.exists(path) and os.path.isdir(path):
                 self.discover_files(path)
+                self.load_font_styles(path)
                 self.load_files()
             elif os.path.exists(path):
                 State.file_list = [path]
                 self.load_files()
         elif last_opened_dir and os.path.exists(last_opened_dir) and os.path.isdir(last_opened_dir):
             self.discover_files(last_opened_dir)
+            self.load_font_styles(last_opened_dir)
             self.load_files()
         else:
             self.browse(open_dir=True)
@@ -383,7 +387,9 @@ class MainInspectorWindow(QMainWindow):
             self.action_reload.setEnabled(False)
             self.clear_state()
             if open_dir:
-                self.discover_files(browser.selectedFiles()[0])
+                path = browser.selectedFiles()[0]
+                self.discover_files(path)
+                self.load_font_styles(path)
             else:
                 State.file_list = browser.selectedFiles()
 
@@ -428,6 +434,27 @@ class MainInspectorWindow(QMainWindow):
         if State.file_list:
             self.config.set_last_opened_dir(path)
             State.game_dir = path
+
+    def load_font_styles(self, path: str):
+        """
+        Locate the game containing font files and load the larger FontStyle.ini.
+        The base game contains this, but the University expansion is known to
+        provide an updated version of the file.
+        """
+        ini_path = ""
+        ini_size = 0
+
+        for prefix in glob.glob(f"{path}/**/Res/UI/Fonts/", recursive=True):
+            _ini_path = os.path.join(prefix, "FontStyle.ini")
+
+            if os.path.exists(_ini_path) and os.path.getsize(_ini_path) > ini_size:
+                ini_path = _ini_path
+                ini_size = os.path.getsize(_ini_path)
+
+        if not ini_path:
+            return QMessageBox.warning(self, "Couldn't load fonts", "FontStyle.ini was not found in this installation. Fonts may not load properly.")
+
+        self.fonts = s2ui.fontstyles.parse_font_styles(ini_path)
 
     def load_files(self):
         """
@@ -567,6 +594,8 @@ class MainInspectorWindow(QMainWindow):
         self.properties_dock.tree.clear()
         self.webview.setHtml(self.default_html)
         self.load_files()
+        if State.game_dir:
+            self.load_font_styles(State.game_dir)
 
     def _uiscript_to_html(self, root: uiscript.UIScriptRoot) -> str:
         """
@@ -619,7 +648,8 @@ class MainInspectorWindow(QMainWindow):
         # Render the UI into HTML
         html = self._uiscript_to_html(data)
         with open(get_resource("inspector.html"), "r", encoding="utf-8") as f:
-            html = f.read().replace("PLACEHOLDER", html)
+            html = f.read().replace("BODY_PLACEHOLDER", html)
+        html = html.replace("/*FONT_PLACEHOLDER*/", s2ui.fontstyles.get_stylesheet(self.fonts))
         self.webview.setHtml(html, baseUrl=QUrl.fromLocalFile(get_resource("")))
 
         # Update the elements and properties dock
@@ -747,6 +777,18 @@ class MainInspectorWindow(QMainWindow):
                                 for c in range(0, i.columnCount()):
                                     i.setToolTip(1, "Missing bitmap")
                                     i.setForeground(c, Qt.GlobalColor.red)
+                case "font":
+                    style_name = element.attributes.get("font", "")
+                    assert isinstance(style_name, str)
+                    font_style = self.fonts.get(style_name)
+                    if font_style:
+                        QTreeWidgetItem(prop, ["Font Face", font_style.font_face])
+                        QTreeWidgetItem(prop, ["Font Size", str(font_style.size)])
+                        QTreeWidgetItem(prop, ["Bold", "Yes" if font_style.bold else "No"])
+                        QTreeWidgetItem(prop, ["Underline", "Yes" if font_style.underline else "No"])
+                        QTreeWidgetItem(prop, ["Line Spacing", str(font_style.line_spacing)])
+                        QTreeWidgetItem(prop, ["Antialiasing Mode", font_style.antialiasing_mode])
+                        QTreeWidgetItem(prop, ["Horizontal Scaling", str(font_style.xscale)])
 
             if key.find("color") != -1 and len(value.split(",")) == 3: # (R, G, B)
                 _color = value[1:-1].split(",")
