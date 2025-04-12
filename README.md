@@ -4,7 +4,7 @@
 **S2UI Inspector** is a homegrown tool to visually inspect and preview
 The Sims 2 user interface elements. Written in Python and PyQt6.
 
-<img src="data/icon.svg" alt="Project Logo" height="96"/>
+![Project Logo](data/icon.svg)
 
 
 ## What's This?
