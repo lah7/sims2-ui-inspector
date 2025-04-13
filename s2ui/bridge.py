@@ -85,7 +85,7 @@ class Bridge(QObject):
         self.elements_menu = elements_menu
 
     @pyqtSlot(str, bool, int, int, result=str) # type: ignore
-    def get_image(self, image_attr: str, is_edge_image: bool, height: int, width: int) -> str:
+    def get_image(self, image_attr: str, is_edge_image: bool, width: int, height: int) -> str:
         """
         Return a base64 encoded PNG image for a TGA graphic extracted from the package.
 
@@ -104,7 +104,7 @@ class Bridge(QObject):
 
         # Perform post processing if necessary
         if is_edge_image:
-            image = s2ui.rendering.render_edge_image(image, height, width)
+            image = s2ui.rendering.render_edge_image(image, width, height)
 
         return base64.b64encode(image.getvalue()).decode("utf-8")
 

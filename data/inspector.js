@@ -110,7 +110,7 @@ function _initialRender() {
 
         // Bitmap
         if (image) {
-            python.get_image(image, edgeImage === "yes" || blttype === "edge", area.height, area.width, function(b64data) {
+            python.get_image(image, edgeImage === "yes" || blttype === "edge", area.width, area.height, function(b64data) {
                 if (!b64data && element.children.length === 0) {
                     element.style.backgroundColor = "red";
                     element.classList.add("missing");

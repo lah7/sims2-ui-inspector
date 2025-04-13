@@ -23,7 +23,7 @@ import io
 import PIL.Image
 
 
-def render_edge_image(original_io: io.BytesIO, height: int, width: int) -> io.BytesIO:
+def render_edge_image(original_io: io.BytesIO, width: int, height: int) -> io.BytesIO:
     """
     Generate a new image replicating how the game renders an image with "edgeimage" set.
 
