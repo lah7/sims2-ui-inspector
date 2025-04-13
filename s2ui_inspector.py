@@ -37,8 +37,9 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
                              QDialogButtonBox, QFileDialog, QHBoxLayout,
                              QMainWindow, QMenu, QMenuBar, QMessageBox,
-                             QSplitter, QStatusBar, QTextEdit, QTreeWidget,
-                             QTreeWidgetItem, QVBoxLayout, QWidget)
+                             QSplitter, QStatusBar, QStyle, QTextEdit,
+                             QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+                             QWidget)
 
 import s2ui.config
 import s2ui.fontstyles
@@ -186,16 +187,23 @@ class MainInspectorWindow(QMainWindow):
         self.menu_bar = QMenuBar()
         self.setMenuBar(self.menu_bar)
 
+        style = self.style()
+        def _fallback(icon: QStyle.StandardPixmap) -> QIcon:
+            """Fallback icons for Windows/macOS"""
+            if style:
+                return QIcon(style.standardIcon(icon))
+            return QIcon()
+
         # === File ===
         self.menu_file = QMenu("&File")
         self.menu_bar.addMenu(self.menu_file)
 
-        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder"), "&Open Game Folder...")
+        self.action_open_dir = QAction(QIcon.fromTheme("document-open-folder", _fallback(QStyle.StandardPixmap.SP_DirOpenIcon)), "&Open Game Folder...")
         self.action_open_dir.setShortcut(QKeySequence.StandardKey.Open)
         self.action_open_dir.triggered.connect(lambda: self.browse(open_dir=True))
         self.menu_file.addAction(self.action_open_dir)
 
-        self.action_open_pkg = QAction(QIcon.fromTheme("document-open"), "Open &Single Package...")
+        self.action_open_pkg = QAction(QIcon.fromTheme("document-open", _fallback(QStyle.StandardPixmap.SP_FileIcon)), "Open &Single Package...")
         self.action_open_pkg.setShortcut(QKeySequence.fromString("Ctrl+Shift+O"))
         self.action_open_pkg.triggered.connect(lambda: self.browse(open_dir=False))
         self.menu_file.addAction(self.action_open_pkg)
