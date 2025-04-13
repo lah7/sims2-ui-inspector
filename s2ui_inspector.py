@@ -476,10 +476,12 @@ class MainInspectorWindow(QMainWindow):
         self.action_reload.setEnabled(False)
         self.status_bar.showMessage(f"Reading {len(State.file_list)} packages...")
         self.setCursor(Qt.CursorShape.WaitCursor)
+
         if State.game_dir:
-            self.setWindowTitle(f"S2UI Inspector — {State.game_dir}")
+            opened_path = State.game_dir
         else:
-            self.setWindowTitle(f"S2UI Inspector — {State.file_list[0]}")
+            opened_path = State.file_list[0]
+        self.setWindowTitle(f"S2UI Inspector — {opened_path.replace('/', os.path.sep)}")
 
         QApplication.processEvents()
 
