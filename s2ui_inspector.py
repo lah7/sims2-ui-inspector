@@ -383,7 +383,7 @@ class MainInspectorWindow(QMainWindow):
         Show the file/folder dialog to select a package file.
         """
         if not open_dir:
-            QMessageBox.information(self, "Open Package File", "Graphics may be referenced from other packages. These graphics are only loaded when opening a game directory.")
+            QMessageBox.information(self, "Open Package File", "Graphics can be referenced from other packages. These graphics will only be loaded when opening a game directory.")
 
         browser = QFileDialog(self, "Where is The Sims 2 (and expansions) installed?" if open_dir else "Open Package File")
         if open_dir:
