@@ -21,6 +21,8 @@ are interpreted. Future versions may allow editing and saving changes!
 
 This tool spun off from the [Sims 2 4K UI Patcher](https://github.com/lah7/sims2-4k-ui-patch) project.
 
+![Screenshot of v0.2.0](https://github.com/user-attachments/assets/123c99f7-baa1-4323-bdca-6393aa122d21)
+
 
 ## Download
 
