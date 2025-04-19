@@ -50,7 +50,7 @@ from s2ui.state import State
 from sims2patcher import dbpf, uiscript
 
 PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 @staticmethod
