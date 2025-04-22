@@ -47,7 +47,7 @@ import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
 from s2ui.state import State
-from sims2patcher import dbpf, uiscript
+from submodules.sims2_4k_ui_patch.sims2patcher import dbpf, uiscript
 
 PROJECT_URL = "https://github.com/lah7/sims2-ui-inspector"
 VERSION = "0.2.0"

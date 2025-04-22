@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import QMenu, QTreeWidget, QTreeWidgetItemIterator
 
 import s2ui.rendering
 from s2ui.state import State
-from sims2patcher import dbpf, uiscript
+from submodules.sims2_4k_ui_patch.sims2patcher import dbpf, uiscript
 
 
 def get_s2ui_element_id(element: uiscript.UIScriptElement) -> str:

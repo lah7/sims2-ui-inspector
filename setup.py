@@ -18,7 +18,7 @@ build_exe_options = {
         "xml",
         "zipfile",
     ],
-    "includes": ["sims2patcher"],
+    "includes": ["submodules"],
     "include_files": [
         ("data/", "data/"),
     ],

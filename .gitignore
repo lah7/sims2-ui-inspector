@@ -1,5 +1,5 @@
-# Module from another repository
-/sims2patcher
+# Ignored for IDE
+/submodules/
 
 # Cache & Build
 __pycache__

@@ -58,10 +58,7 @@ due to distributing older Python versions.
 **Then,** change directory (cd) into a folder to store the code.
 We will also need to download modules from another repository for this program to work.
 
-    git clone https://github.com/lah7/sims2-ui-inspector.git
-    git clone https://github.com/lah7/sims2-4k-ui-patch.git
-    cd sims2-ui-inspector
-    ln -s ../sims2-4k-ui-patch/sims2patcher/ .
+    git clone --recurse-submodules https://github.com/lah7/sims2-ui-inspector.git
 
 Ready to start!
 
@@ -70,10 +67,7 @@ Ready to start!
 To update both repositories for the latest changes:
 
     cd sims2-ui-inspector
-    git pull --rebase origin master
-
-    cd ../sims2-4k-ui-patch
-    git pull --rebase origin master
+    git pull --recurse-submodules --rebase origin master
 
 [latest release]: https://github.com/lah7/sims2-ui-inspector/releases/latest
 
@@ -88,10 +82,7 @@ To update both repositories for the latest changes:
 
 **Initial Setup**
 
-    git clone https://github.com/lah7/sims2-ui-inspector.git
-    git clone https://github.com/lah7/sims2-4k-ui-patch.git
-
-This program needs the `sims2patcher` modules from [lah7/sims2-4k-ui-patch](https://github.com/lah7/sims2-4k-ui-patch). Copy the `sims2patcher` folder from `sims2-4k-ui-patch` to `sims2-ui-inspector`.
+    git clone --recurse-submodules https://github.com/lah7/sims2-ui-inspector.git
 
 
 **Windows**
@@ -113,6 +104,10 @@ Create your virtual environment, activate it, and install the dependencies:
 **Running**
 
     python ./s2ui_inspector.py
+
+**Updating**
+
+    git pull --rebase --recurse-submodules origin master
 
 
 ## What about other Maxis games?

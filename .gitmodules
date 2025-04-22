@@ -1,0 +1,3 @@
+[submodule "submodules/sims2_4k_ui_patch"]
+	path = submodules/sims2_4k_ui_patch
+	url = https://github.com/lah7/sims2-4k-ui-patch.git

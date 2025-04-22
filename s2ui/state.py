@@ -1,7 +1,7 @@
 """
 Shared state of the application
 """
-from sims2patcher import dbpf
+from submodules.sims2_4k_ui_patch.sims2patcher import dbpf
 
 
 class State:

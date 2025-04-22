@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QDialog, QHBoxLayout,
 
 from s2ui.bridge import get_s2ui_element_id
 from s2ui.widgets import iterate_children
-from sims2patcher import uiscript
+from submodules.sims2_4k_ui_patch.sims2patcher import uiscript
 
 
 class GlobalSearchDialog(QDialog):
