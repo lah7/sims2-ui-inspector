@@ -520,7 +520,10 @@ class MainInspectorWindow(QMainWindow):
                 if entry.decompressed_size > 1024 * 1024:
                     checksum = "Binary data"
                 else:
-                    checksum = hashlib.md5(entry.data_safe).hexdigest()
+                    try:
+                        checksum = hashlib.md5(entry.data_safe).hexdigest()
+                    except dbpf.errors.ArrayTooSmall:
+                        checksum = "Compression error"
 
                 if checksum not in files[key]:
                     files[key][checksum] = []
@@ -567,7 +570,7 @@ class MainInspectorWindow(QMainWindow):
                     try:
                         data = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
                         item.setData(1, Qt.ItemDataRole.UserRole, data)
-                    except (ValueError, UnicodeDecodeError):
+                    except (ValueError, UnicodeDecodeError, dbpf.errors.ArrayTooSmall):
                         item.setForeground(0, QColor(Qt.GlobalColor.red))
                         item.setForeground(1, QColor(Qt.GlobalColor.red))
                         item.setToolTip(0, "Cannot parse file")
