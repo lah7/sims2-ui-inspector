@@ -133,6 +133,7 @@ class MainInspectorWindow(QMainWindow):
                                                self.action_copy_group_id,
                                                self.action_copy_instance_id])
         self.elements_dock.setup_context_menu([self.action_element_visible,
+                                               self.action_parent_element,
                                                "|",
                                                self.action_copy_element_class,
                                                self.action_copy_element_caption,
@@ -266,6 +267,11 @@ class MainInspectorWindow(QMainWindow):
         self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
+
+        self.action_parent_element = QAction(QIcon.fromTheme("view-list-tree-symbolic"), "Select &Parent")
+        self.action_parent_element.setShortcut(QKeySequence.fromString("Ctrl+P"))
+        self.action_parent_element.triggered.connect(self.select_parent_element)
+        self.menu_edit.addAction(self.action_parent_element)
 
         self.action_copy_element_class = QAction(QIcon.fromTheme("edit-copy"), "Copy &Class")
         self.action_copy_element_class.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
@@ -772,6 +778,7 @@ class MainInspectorWindow(QMainWindow):
             action.setEnabled(True)
 
         self.action_element_visible.setChecked(item.data(1, Qt.ItemDataRole.UserRole))
+        self.action_parent_element.setEnabled(item.parent() is not None)
 
         element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
         element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
@@ -981,6 +988,16 @@ class MainInspectorWindow(QMainWindow):
                     child.setData(c, Qt.ItemDataRole.ForegroundRole, None)
                 else:
                     child.setForeground(c, Qt.GlobalColor.gray)
+
+    def select_parent_element(self):
+        """
+        Shortcut to select the parent of a child element.
+        """
+        item = self.elements_dock.tree.currentItem()
+        if item:
+            parent = item.parent()
+            if parent:
+                self.elements_dock.tree.setCurrentItem(parent)
 
     def open_global_search(self, prefill_attrib=False, prefill_value=False):
         """
