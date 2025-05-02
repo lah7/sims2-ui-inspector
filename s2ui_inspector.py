@@ -127,10 +127,26 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.toolbar.addAction(self.action_element_visible)
 
         # Context menus
-        self.uiscript_dock.setup_context_menu([self.action_script_src, "|", self.action_copy_ids, self.action_copy_group_id, self.action_copy_instance_id])
-        self.elements_dock.setup_context_menu([self.action_element_visible, "|", self.action_copy_element_class, self.action_copy_element_caption, self.action_copy_element_id, self.action_copy_element_pos])
-        self.properties_dock.setup_context_menu([self.action_copy_attribute, self.action_copy_value, "|", self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue])
-        self.context_menu_only_actions = [self.action_similar_attrib, self.action_similar_value, self.action_similar_attribvalue]
+        self.uiscript_dock.setup_context_menu([self.action_script_src,
+                                               "|",
+                                               self.action_copy_ids,
+                                               self.action_copy_group_id,
+                                               self.action_copy_instance_id])
+        self.elements_dock.setup_context_menu([self.action_element_visible,
+                                               "|",
+                                               self.action_copy_element_class,
+                                               self.action_copy_element_caption,
+                                               self.action_copy_element_id,
+                                               self.action_copy_element_pos])
+        self.properties_dock.setup_context_menu([self.action_copy_attribute,
+                                                 self.action_copy_value,
+                                                 "|",
+                                                 self.action_similar_attrib,
+                                                 self.action_similar_value,
+                                                 self.action_similar_attribvalue])
+        self.context_menu_only_actions = [self.action_similar_attrib,
+                                          self.action_similar_value,
+                                          self.action_similar_attribvalue]
 
         # Status bar
         self.status_bar: QStatusBar = self.statusBar() # type: ignore
@@ -221,6 +237,7 @@ class MainInspectorWindow(QMainWindow):
         self.menu_file.addAction(self.action_exit)
 
         # === Edit ===
+        # Some actions below are only shown in the context menu
         self.menu_edit = QMenu("&Edit")
         self.menu_bar.addMenu(self.menu_edit)
 
@@ -250,33 +267,26 @@ class MainInspectorWindow(QMainWindow):
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
 
-        self.action_copy_element_class = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &Class")
+        self.action_copy_element_class = QAction(QIcon.fromTheme("edit-copy"), "Copy &Class")
         self.action_copy_element_class.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
-        self.menu_edit.addAction(self.action_copy_element_class)
 
-        self.action_copy_element_caption = QAction(QIcon.fromTheme("edit-copy"), "Copy Element C&aption")
+        self.action_copy_element_caption = QAction(QIcon.fromTheme("edit-copy"), "Copy C&aption")
         self.action_copy_element_caption.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 1))
-        self.menu_edit.addAction(self.action_copy_element_caption)
 
-        self.action_copy_element_id = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &ID")
+        self.action_copy_element_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &ID")
         self.action_copy_element_id.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 2))
-        self.menu_edit.addAction(self.action_copy_element_id)
 
-        self.action_copy_element_pos = QAction(QIcon.fromTheme("edit-copy"), "Copy Element &Position")
+        self.action_copy_element_pos = QAction(QIcon.fromTheme("edit-copy"), "Copy &Position")
         self.action_copy_element_pos.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 3))
-        self.menu_edit.addAction(self.action_copy_element_pos)
 
         # ... for Properties dock
         self.menu_edit.addSeparator()
         self.action_copy_attribute = QAction(QIcon.fromTheme("edit-copy"), "Copy &Attribute")
         self.action_copy_attribute.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 0))
-        self.menu_edit.addAction(self.action_copy_attribute)
 
         self.action_copy_value = QAction(QIcon.fromTheme("edit-copy"), "Copy &Value")
         self.action_copy_value.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 1))
-        self.menu_edit.addAction(self.action_copy_value)
 
-        # ... Only shown in context menu
         self.action_similar_attrib = QAction(QIcon.fromTheme("edit-find"), "Find elements with this &attribute")
         self.action_similar_attrib.triggered.connect(lambda: self.open_global_search(True, False))
         self.action_similar_attrib.setDisabled(True)
