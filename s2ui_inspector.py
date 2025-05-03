@@ -128,6 +128,7 @@ class MainInspectorWindow(QMainWindow):
 
         # Context menus
         self.uiscript_dock.setup_context_menu([self.action_script_src,
+                                               self.action_script_checksum,
                                                "|",
                                                self.action_copy_ids,
                                                self.action_copy_group_id,
@@ -247,6 +248,11 @@ class MainInspectorWindow(QMainWindow):
         self.action_script_src.triggered.connect(self.open_original_code)
         self.menu_edit.addAction(self.action_script_src)
 
+        self.action_script_checksum = QAction(QIcon.fromTheme("edit-copy"), "Copy &Checksum")
+        self.action_script_checksum.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.uiscript_dock.tree, 3, data=True))
+        self.menu_edit.addAction(self.action_script_checksum)
+
+        self.menu_edit.addSeparator()
         self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy Group and Instance ID")
         self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
         self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)} {hex(State.current_instance_id)}"))
@@ -388,10 +394,12 @@ class MainInspectorWindow(QMainWindow):
         else:
             self.status_bar.showMessage("Unable to copy to clipboard")
 
-    def _copy_tree_item_to_clipboard(self, tree: QTreeWidget, column: int):
+    def _copy_tree_item_to_clipboard(self, tree: QTreeWidget, column: int, data=False):
         """Copy the selected item's text to the clipboard"""
         item = tree.currentItem()
-        if item:
+        if item and data:
+            self._copy_to_clipboard(item.data(column, Qt.ItemDataRole.UserRole))
+        elif item:
             self._copy_to_clipboard(item.text(column))
 
     def browse(self, open_dir: bool):
