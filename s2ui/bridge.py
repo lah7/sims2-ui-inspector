@@ -28,6 +28,7 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QMenu, QTreeWidget, QTreeWidgetItemIterator
 
 import s2ui.rendering
+from s2ui.enums import ElementsColumnData
 from s2ui.state import State
 from submodules.sims2_4k_ui_patch.sims2patcher import dbpf, uiscript
 
@@ -119,7 +120,7 @@ class Bridge(QObject):
             if not item:
                 return
 
-            if item.data(2, Qt.ItemDataRole.UserRole) == element_id:
+            if item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole) == element_id:
                 self.element_tree.setCurrentItem(item)
                 self.element_tree.scrollToItem(item)
                 break
@@ -137,7 +138,7 @@ class Bridge(QObject):
             if not item:
                 return
 
-            if item.data(2, Qt.ItemDataRole.UserRole) == element_id:
+            if item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole) == element_id:
                 for c in range(item.columnCount()):
                     item.setBackground(c, Qt.GlobalColor.darkGray)
             else:

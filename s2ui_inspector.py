@@ -46,6 +46,9 @@ import s2ui.fontstyles
 import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
+from s2ui.enums import (ElementsColumnData, ElementsColumnText,
+                        PropertiesColumnText, UIScriptColumnData,
+                        UIScriptColumnText)
 from s2ui.state import State
 from submodules.sims2_4k_ui_patch.sims2patcher import dbpf, uiscript
 
@@ -82,10 +85,6 @@ class MainInspectorWindow(QMainWindow):
         self.setCentralWidget(self.base_widget)
 
         # Dock: UI Scripts
-        # QTreeWidgetItem data columns:
-        # - 0: dbpf.Entry
-        # - 1: uiscript.UIScriptRoot
-        # - 3: str: Checksum of original file
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
         self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Appears in", "Package"])
@@ -98,10 +97,6 @@ class MainInspectorWindow(QMainWindow):
         self.uiscript_dock.tree.currentItemChanged.connect(self.inspect_ui_file)
 
         # Dock: Elements
-        # QTreeWidgetItem data columns:
-        # - 0: uiscript.UIScriptElement
-        # - 1: bool: Visible
-        # - 2: str: s2ui_element_id
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
         self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
         self.elements_dock.tree.setColumnWidth(0, 225)
@@ -115,7 +110,7 @@ class MainInspectorWindow(QMainWindow):
         self.properties_dock.tree.setHeaderLabels(["Attribute", "Value"])
         self.properties_dock.tree.setColumnWidth(0, 200)
         self.properties_dock.tree.setSortingEnabled(True)
-        self.properties_dock.tree.sortByColumn(0, Qt.SortOrder.AscendingOrder)
+        self.properties_dock.tree.sortByColumn(PropertiesColumnText.ATTRIBUTE, Qt.SortOrder.AscendingOrder)
 
         # Allow drag-and-dropping docks into each other
         self.setDockOptions(QMainWindow.DockOption.AllowTabbedDocks | QMainWindow.DockOption.AllowNestedDocks)
@@ -579,27 +574,27 @@ class MainInspectorWindow(QMainWindow):
                 entry = file_list[0].entry
 
                 item = QTreeWidgetItem([hex(group_id), hex(instance_id), "", _get_name_label(this_game_names), _get_package_label(this_package_names)])
-                item.setToolTip(3, "\n".join(this_game_names))
-                item.setToolTip(4, "\n".join(this_package_names))
-                item.setData(0, Qt.ItemDataRole.UserRole, entry)
-                item.setData(3, Qt.ItemDataRole.UserRole, checksum)
+                item.setToolTip(UIScriptColumnText.GAME, "\n".join(this_game_names))
+                item.setToolTip(UIScriptColumnText.PACKAGE, "\n".join(this_package_names))
+                item.setData(UIScriptColumnData.DBPF_ENTRY, Qt.ItemDataRole.UserRole, entry)
+                item.setData(UIScriptColumnData.CHECKSUM, Qt.ItemDataRole.UserRole, checksum)
+
+                error_column_ids = [UIScriptColumnText.GROUP_ID, UIScriptColumnText.INSTANCE_ID]
 
                 if entry.decompressed_size > 1024 * 1024:
-                    item.setForeground(0, QColor(Qt.GlobalColor.red))
-                    item.setForeground(1, QColor(Qt.GlobalColor.red))
-                    item.setToolTip(0, "Cannot read file")
-                    item.setToolTip(1, "Cannot read file")
                     item.setDisabled(True)
+                    for col in error_column_ids:
+                        item.setForeground(col, QColor(Qt.GlobalColor.red))
+                        item.setToolTip(col, "Cannot read file")
                 else:
                     try:
                         data = uiscript.serialize_uiscript(entry.data.decode("utf-8"))
-                        item.setData(1, Qt.ItemDataRole.UserRole, data)
+                        item.setData(UIScriptColumnData.UISCRIPT_ROOT, Qt.ItemDataRole.UserRole, data)
                     except (ValueError, UnicodeDecodeError, dbpf.errors.ArrayTooSmall):
-                        item.setForeground(0, QColor(Qt.GlobalColor.red))
-                        item.setForeground(1, QColor(Qt.GlobalColor.red))
-                        item.setToolTip(0, "Cannot parse file")
-                        item.setToolTip(1, "Cannot parse file")
                         item.setDisabled(True)
+                        for col in error_column_ids:
+                            item.setForeground(col, QColor(Qt.GlobalColor.red))
+                            item.setToolTip(col, "Cannot parse file")
 
                 children.append(item)
 
@@ -611,8 +606,8 @@ class MainInspectorWindow(QMainWindow):
             game_names = sorted(set(game_names))
             package_names = sorted(set(package_names))
             parent = QTreeWidgetItem([hex(group_id), hex(instance_id), "", _get_name_label(game_names), _get_package_label(package_names)])
-            parent.setToolTip(3, "\n".join(game_names))
-            parent.setToolTip(4, "\n".join(package_names))
+            parent.setToolTip(UIScriptColumnText.GAME, "\n".join(game_names))
+            parent.setToolTip(UIScriptColumnText.PACKAGE, "\n".join(package_names))
             for child in children:
                 parent.addChild(child)
                 self.preload_items.append(child)
@@ -669,8 +664,8 @@ class MainInspectorWindow(QMainWindow):
         if not item:
             return
 
-        entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
-        data: uiscript.UIScriptRoot = item.data(1, Qt.ItemDataRole.UserRole)
+        entry: dbpf.Entry = item.data(UIScriptColumnData.DBPF_ENTRY, Qt.ItemDataRole.UserRole)
+        data: uiscript.UIScriptRoot = item.data(UIScriptColumnData.UISCRIPT_ROOT, Qt.ItemDataRole.UserRole)
 
         if not data:
             # Group item, select first child instead
@@ -709,20 +704,20 @@ class MainInspectorWindow(QMainWindow):
             xpos, ypos, width, height = area.strip("()").split(",")
 
             item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
-            item.setData(0, Qt.ItemDataRole.UserRole, element)
-            item.setData(1, Qt.ItemDataRole.UserRole, True)
-            item.setData(2, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
-            item.setToolTip(1, caption)
-            item.setToolTip(2, element_id)
-            item.setToolTip(3, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
+            item.setData(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole, element)
+            item.setData(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole, True)
+            item.setData(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
+            item.setToolTip(ElementsColumnText.CAPTION, caption)
+            item.setToolTip(ElementsColumnText.ID, element_id)
+            item.setToolTip(ElementsColumnText.POSITION, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
 
             if image_attr:
                 png = get_image_as_png(image_attr)
                 if png is None:
                     pixmap = QPixmap(16, 16)
                     pixmap.fill(Qt.GlobalColor.red)
-                    item.setToolTip(0, f"Missing bitmap: {image_attr}")
-                    item.setForeground(0, Qt.GlobalColor.red)
+                    item.setToolTip(ElementsColumnText.ELEMENT, f"Missing bitmap: {image_attr}")
+                    item.setForeground(ElementsColumnText.ELEMENT, Qt.GlobalColor.red)
                 else:
                     png_data = png.getvalue()
                     pixmap = QPixmap()
@@ -767,17 +762,17 @@ class MainInspectorWindow(QMainWindow):
 
     def hover_element(self, item: QTreeWidgetItem):
         """
-        Highlight the hovered element in the webview.
+        Highlight the hovered element in the webview when highlighted from the elements tree.
         """
         if not item:
             return
 
-        element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
+        element_id: str = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
         self.webview_page.runJavaScript(f"hoverElement('{element_id}')")
 
     def inspect_element(self, item: QTreeWidgetItem):
         """
-        Display the properties of the selected element.
+        Display the properties of the selected element when selected from the elements tree.
         """
         if not item:
             return
@@ -785,11 +780,11 @@ class MainInspectorWindow(QMainWindow):
         for action in self.elements_dock.context_menu.actions():
             action.setEnabled(True)
 
-        self.action_element_visible.setChecked(item.data(1, Qt.ItemDataRole.UserRole))
+        self.action_element_visible.setChecked(item.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole))
         self.action_parent_element.setEnabled(item.parent() is not None)
 
-        element: uiscript.UIScriptElement = item.data(0, Qt.ItemDataRole.UserRole)
-        element_id: str = item.data(2, Qt.ItemDataRole.UserRole)
+        element: uiscript.UIScriptElement = item.data(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole)
+        element_id: str = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
         self.webview_page.runJavaScript(f"selectElement('{element_id}')")
 
         self.properties_dock.tree.clear()
@@ -860,11 +855,11 @@ class MainInspectorWindow(QMainWindow):
         self.action_reload.setEnabled(False)
         while self.preload_items:
             item = self.preload_items.pop(0)
-            entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
-            data: uiscript.UIScriptRoot = item.data(1, Qt.ItemDataRole.UserRole)
+            entry: dbpf.Entry = item.data(UIScriptColumnData.DBPF_ENTRY, Qt.ItemDataRole.UserRole)
+            data: uiscript.UIScriptRoot = item.data(UIScriptColumnData.UISCRIPT_ROOT, Qt.ItemDataRole.UserRole)
 
             if entry.decompressed_size > 1024 * 1024:
-                item.setText(2, "Binary data")
+                item.setText(UIScriptColumnText.CAPTION, "Binary data")
                 item.setDisabled(True)
                 continue
 
@@ -888,15 +883,17 @@ class MainInspectorWindow(QMainWindow):
                     break
 
             if matches:
+                column_id = UIScriptColumnText.CAPTION
+
                 # Use first found caption as the hint
-                item.setText(2, matches[0])
-                item.setToolTip(2, "\n".join(matches))
+                item.setText(column_id, matches[0])
+                item.setToolTip(column_id, "\n".join(matches))
 
                 # For grouped items, update the parent
                 parent = item.parent()
                 if parent:
-                    parent.setText(2, max(matches, key=len))
-                    parent.setToolTip(2, "\n".join(matches))
+                    parent.setText(column_id, max(matches, key=len))
+                    parent.setToolTip(column_id, "\n".join(matches))
 
         self.action_reload.setEnabled(True)
 
@@ -908,7 +905,7 @@ class MainInspectorWindow(QMainWindow):
         if not item:
             return
 
-        entry: dbpf.Entry = item.data(0, Qt.ItemDataRole.UserRole)
+        entry: dbpf.Entry = item.data(UIScriptColumnData.DBPF_ENTRY, Qt.ItemDataRole.UserRole)
         if not entry:
             return
 
@@ -973,10 +970,10 @@ class MainInspectorWindow(QMainWindow):
         if not item:
             return
 
-        element_id = item.data(2, Qt.ItemDataRole.UserRole)
-        visible = not item.data(1, Qt.ItemDataRole.UserRole)
-        item.setData(1, Qt.ItemDataRole.UserRole, visible)
-        item.setIcon(2, QIcon.fromTheme("view-hidden") if not visible else QIcon())
+        element_id = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
+        visible = not item.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole)
+        item.setData(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole, visible)
+        item.setIcon(ElementsColumnData.ELEMENT_ID_S2UI, QIcon.fromTheme("view-hidden") if not visible else QIcon())
 
         if visible:
             self.webview_page.runJavaScript(f"showElement('{element_id}')")
@@ -985,10 +982,10 @@ class MainInspectorWindow(QMainWindow):
 
         # De-emphasise the text and descendants
         for child in [item] + s2ui.widgets.iterate_children(item):
-            _seen = [child.data(1, Qt.ItemDataRole.UserRole)]
+            _seen = [child.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole)]
             parent = child.parent()
             while parent:
-                _seen.append(parent.data(1, Qt.ItemDataRole.UserRole))
+                _seen.append(parent.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole))
                 parent = parent.parent()
 
             for c in range(0, child.columnCount()):
