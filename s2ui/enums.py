@@ -25,7 +25,6 @@ class ElementsColumnText(IntEnum):
     ELEMENT = 0
     CAPTION = 1
     ID = 2
-    POSITION = 3
 
 
 class ElementsColumnData(IntEnum):

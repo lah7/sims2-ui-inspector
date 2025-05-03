@@ -98,9 +98,8 @@ class MainInspectorWindow(QMainWindow):
 
         # Dock: Elements
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
-        self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID", "Position"])
-        self.elements_dock.tree.setColumnWidth(0, 225)
-        self.elements_dock.tree.setColumnWidth(3, 100)
+        self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID"])
+        self.elements_dock.tree.setColumnWidth(ElementsColumnText.ELEMENT, 225)
         self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
         self.elements_dock.tree.setMouseTracking(True)
         self.elements_dock.tree.itemEntered.connect(self.hover_element)
@@ -133,8 +132,7 @@ class MainInspectorWindow(QMainWindow):
                                                "|",
                                                self.action_copy_element_class,
                                                self.action_copy_element_caption,
-                                               self.action_copy_element_id,
-                                               self.action_copy_element_pos])
+                                               self.action_copy_element_id])
         self.properties_dock.setup_context_menu([self.action_copy_attribute,
                                                  self.action_copy_value,
                                                  "|",
@@ -282,9 +280,6 @@ class MainInspectorWindow(QMainWindow):
 
         self.action_copy_element_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &ID")
         self.action_copy_element_id.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 2))
-
-        self.action_copy_element_pos = QAction(QIcon.fromTheme("edit-copy"), "Copy &Position")
-        self.action_copy_element_pos.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 3))
 
         # ... for Properties dock
         self.menu_edit.addSeparator()
@@ -701,15 +696,12 @@ class MainInspectorWindow(QMainWindow):
             assert isinstance(area, str)
             assert isinstance(image_attr, str)
 
-            xpos, ypos, width, height = area.strip("()").split(",")
-
-            item = QTreeWidgetItem(parent, [iid, caption, element_id, f"({xpos}, {ypos})"])
+            item = QTreeWidgetItem(parent, [iid, caption, element_id])
             item.setData(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole, element)
             item.setData(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole, True)
             item.setData(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
             item.setToolTip(ElementsColumnText.CAPTION, caption)
             item.setToolTip(ElementsColumnText.ID, element_id)
-            item.setToolTip(ElementsColumnText.POSITION, f"X: {xpos}\nY: {ypos}\nWidth: {width}\nHeight: {height}")
 
             if image_attr:
                 png = get_image_as_png(image_attr)
