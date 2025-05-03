@@ -98,11 +98,13 @@ class MainInspectorWindow(QMainWindow):
 
         # Dock: Elements
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
-        self.elements_dock.tree.setHeaderLabels(["Element", "Caption", "ID"])
+        self.elements_dock.tree.setHeaderLabels(["Element", "Show", "Caption", "ID"])
         self.elements_dock.tree.setColumnWidth(ElementsColumnText.ELEMENT, 225)
+        self.elements_dock.tree.setColumnWidth(ElementsColumnText.SHOWN, 40)
         self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
         self.elements_dock.tree.setMouseTracking(True)
         self.elements_dock.tree.itemEntered.connect(self.hover_element)
+        self.elements_dock.tree.itemChanged.connect(lambda item, column: self.update_element_visibility() if column == ElementsColumnText.SHOWN else None)
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
@@ -118,7 +120,6 @@ class MainInspectorWindow(QMainWindow):
         self._create_menu_bar()
         self.uiscript_dock.toolbar.addAction(self.action_script_src)
         self.uiscript_dock.toolbar.addAction(self.action_copy_ids)
-        self.elements_dock.toolbar.addAction(self.action_element_visible)
 
         # Context menus
         self.uiscript_dock.setup_context_menu([self.action_copy_ids,
@@ -696,12 +697,12 @@ class MainInspectorWindow(QMainWindow):
             assert isinstance(area, str)
             assert isinstance(image_attr, str)
 
-            item = QTreeWidgetItem(parent, [iid, caption, element_id])
+            item = QTreeWidgetItem(parent, [iid, "", caption, element_id])
             item.setData(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole, element)
-            item.setData(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole, True)
             item.setData(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
             item.setToolTip(ElementsColumnText.CAPTION, caption)
             item.setToolTip(ElementsColumnText.ID, element_id)
+            item.setCheckState(ElementsColumnText.SHOWN, Qt.CheckState.Checked)
 
             if image_attr:
                 png = get_image_as_png(image_attr)
@@ -772,7 +773,7 @@ class MainInspectorWindow(QMainWindow):
         for action in self.elements_dock.context_menu.actions():
             action.setEnabled(True)
 
-        self.action_element_visible.setChecked(item.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole))
+        self.action_element_visible.setChecked(item.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked)
         self.action_parent_element.setEnabled(item.parent() is not None)
 
         element: uiscript.UIScriptElement = item.data(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole)
@@ -956,16 +957,33 @@ class MainInspectorWindow(QMainWindow):
 
     def toggle_element_visibility(self):
         """
-        Toggle the visibility of the currently selected element.
+        When using the context menu (action), update the tree view.
+        """
+        item = self.elements_dock.tree.currentItem()
+        if not item:
+            return
+
+        checked = item.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked
+        if checked:
+            item.setCheckState(ElementsColumnText.SHOWN, Qt.CheckState.Unchecked)
+            self.action_element_visible.setChecked(False)
+        else:
+            item.setCheckState(ElementsColumnText.SHOWN, Qt.CheckState.Checked)
+            self.action_element_visible.setChecked(True)
+
+    def update_element_visibility(self):
+        """
+        Show/hide the currently selected element depending on the visibility state.
         """
         item = self.elements_dock.tree.currentItem()
         if not item:
             return
 
         element_id = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
-        visible = not item.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole)
-        item.setData(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole, visible)
-        item.setIcon(ElementsColumnData.ELEMENT_ID_S2UI, QIcon.fromTheme("view-hidden") if not visible else QIcon())
+        visible = item.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked
+
+        if item == self.elements_dock.tree.currentItem():
+            self.action_element_visible.setChecked(visible)
 
         if visible:
             self.webview_page.runJavaScript(f"showElement('{element_id}')")
@@ -974,10 +992,10 @@ class MainInspectorWindow(QMainWindow):
 
         # De-emphasise the text and descendants
         for child in [item] + s2ui.widgets.iterate_children(item):
-            _seen = [child.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole)]
+            _seen = [child.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked]
             parent = child.parent()
             while parent:
-                _seen.append(parent.data(ElementsColumnData.VISIBLE, Qt.ItemDataRole.UserRole))
+                _seen.append(parent.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked)
                 parent = parent.parent()
 
             for c in range(0, child.columnCount()):

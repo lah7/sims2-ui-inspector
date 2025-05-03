@@ -23,14 +23,14 @@ class UIScriptColumnData(IntEnum):
 class ElementsColumnText(IntEnum):
     """Text column IDs for the elements tree"""
     ELEMENT = 0
-    CAPTION = 1
-    ID = 2
+    SHOWN = 1
+    CAPTION = 2
+    ID = 3
 
 
 class ElementsColumnData(IntEnum):
     """Data column IDs for the elements tree (user role)"""
     UISCRIPT_ELEMENT = 0
-    VISIBLE = 1
     ELEMENT_ID_S2UI = 2
 
 
