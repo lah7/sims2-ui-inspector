@@ -127,12 +127,12 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.toolbar.addAction(self.action_element_visible)
 
         # Context menus
-        self.uiscript_dock.setup_context_menu([self.action_script_src,
-                                               self.action_script_checksum,
-                                               "|",
-                                               self.action_copy_ids,
+        self.uiscript_dock.setup_context_menu([self.action_copy_ids,
                                                self.action_copy_group_id,
-                                               self.action_copy_instance_id])
+                                               self.action_copy_instance_id,
+                                               "|",
+                                               self.action_script_src,
+                                               self.action_script_checksum])
         self.elements_dock.setup_context_menu([self.action_element_visible,
                                                self.action_parent_element,
                                                "|",
@@ -244,6 +244,20 @@ class MainInspectorWindow(QMainWindow):
         self.menu_bar.addMenu(self.menu_edit)
 
         # ... for UI Script dock
+        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy Group and Instance ID")
+        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
+        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)} {hex(State.current_instance_id)}"))
+        self.menu_edit.addAction(self.action_copy_ids)
+
+        self.action_copy_group_id = QAction("Copy &Group ID")
+        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
+        self.menu_edit.addAction(self.action_copy_group_id)
+
+        self.action_copy_instance_id = QAction("Copy &Instance ID")
+        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
+        self.menu_edit.addAction(self.action_copy_instance_id)
+
+        self.menu_edit.addSeparator()
         self.action_script_src = QAction(QIcon.fromTheme("format-text-code"), "Show &Original Code")
         self.action_script_src.triggered.connect(self.open_original_code)
         self.menu_edit.addAction(self.action_script_src)
@@ -251,20 +265,6 @@ class MainInspectorWindow(QMainWindow):
         self.action_script_checksum = QAction(QIcon.fromTheme("edit-copy"), "Copy &Checksum")
         self.action_script_checksum.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.uiscript_dock.tree, 3, data=True))
         self.menu_edit.addAction(self.action_script_checksum)
-
-        self.menu_edit.addSeparator()
-        self.action_copy_ids = QAction(QIcon.fromTheme("edit-copy"), "Copy Group and Instance ID")
-        self.action_copy_ids.setShortcut(QKeySequence.fromString("Ctrl+Shift+C"))
-        self.action_copy_ids.triggered.connect(lambda: self._copy_to_clipboard(f"{hex(State.current_group_id)} {hex(State.current_instance_id)}"))
-        self.menu_edit.addAction(self.action_copy_ids)
-
-        self.action_copy_group_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &Group ID")
-        self.action_copy_group_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_group_id))
-        self.menu_edit.addAction(self.action_copy_group_id)
-
-        self.action_copy_instance_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &Instance ID")
-        self.action_copy_instance_id.triggered.connect(lambda: self._copy_to_clipboard(State.current_instance_id))
-        self.menu_edit.addAction(self.action_copy_instance_id)
 
         # ... for Elements dock
         self.menu_edit.addSeparator()
