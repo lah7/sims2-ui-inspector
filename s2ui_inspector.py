@@ -104,7 +104,7 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
         self.elements_dock.tree.setMouseTracking(True)
         self.elements_dock.tree.itemEntered.connect(self.hover_element)
-        self.elements_dock.tree.itemChanged.connect(lambda item, column: self.update_element_visibility() if column == ElementsColumnText.SHOWN else None)
+        self.elements_dock.setup_column_change(ElementsColumnText.SHOWN, self.update_element_visibility)
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
@@ -957,7 +957,7 @@ class MainInspectorWindow(QMainWindow):
 
     def toggle_element_visibility(self):
         """
-        When using the context menu (action), update the tree view.
+        Toggle the currently selected element's visiblity via the context menu (action).
         """
         item = self.elements_dock.tree.currentItem()
         if not item:
@@ -971,14 +971,10 @@ class MainInspectorWindow(QMainWindow):
             item.setCheckState(ElementsColumnText.SHOWN, Qt.CheckState.Checked)
             self.action_element_visible.setChecked(True)
 
-    def update_element_visibility(self):
+    def update_element_visibility(self, item: QTreeWidgetItem):
         """
-        Show/hide the currently selected element depending on the visibility state.
+        Show/hide the selected element depending on the visibility state.
         """
-        item = self.elements_dock.tree.currentItem()
-        if not item:
-            return
-
         element_id = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
         visible = item.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked
 

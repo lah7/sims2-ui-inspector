@@ -17,6 +17,7 @@ Module for Qt widgets used in the UI.
 #
 # Copyright (C) 2025 Luke Horwell <code@horwell.me>
 #
+from typing import Callable
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QCursor, QKeySequence, QShortcut
@@ -61,6 +62,7 @@ class DockTree(QDockWidget):
         # Widgets
         self.tree = QTreeWidget()
         self.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+        self.tree.itemChanged.connect(self._item_changed)
         self.filter = FilterBox(self.tree)
         self.context_menu = QMenu()
 
@@ -77,6 +79,14 @@ class DockTree(QDockWidget):
         self.base_layout.addWidget(self.toolbar)
         self.base_layout.addWidget(self.tree)
 
+        # (Optional) Call a function when a column is changed/checked
+        self.on_changed: dict[int, Callable] = {}
+
+    def _item_changed(self, item: QTreeWidgetItem, column: int):
+        """Call the function assigned to the column when it is changed."""
+        if column in self.on_changed:
+            self.on_changed[column](item)
+
     def setup_context_menu(self, actions: list[QAction|str]):
         """Set up the context menu when right clicking on a tree item."""
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -86,6 +96,10 @@ class DockTree(QDockWidget):
                 continue
             self.context_menu.addAction(action)
         self.tree.customContextMenuRequested.connect(lambda: self.context_menu.exec(QCursor.pos()))
+
+    def setup_column_change(self, column: int, caller: Callable):
+        """Assign a function to be called when a column is changed/checked."""
+        self.on_changed[column] = caller
 
 
 class FilterBox(QLineEdit):
