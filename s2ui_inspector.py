@@ -130,7 +130,7 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.setup_context_menu([self.action_element_visible,
                                                self.action_parent_element,
                                                "|",
-                                               self.action_copy_element_class,
+                                               self.action_copy_element_iid,
                                                self.action_copy_element_caption,
                                                self.action_copy_element_id])
         self.properties_dock.setup_context_menu([self.action_copy_attribute,
@@ -272,8 +272,8 @@ class MainInspectorWindow(QMainWindow):
         self.action_parent_element.triggered.connect(self.select_parent_element)
         self.menu_edit.addAction(self.action_parent_element)
 
-        self.action_copy_element_class = QAction(QIcon.fromTheme("edit-copy"), "Copy &Class")
-        self.action_copy_element_class.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
+        self.action_copy_element_iid = QAction(QIcon.fromTheme("edit-copy"), "Copy &Interface ID")
+        self.action_copy_element_iid.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
 
         self.action_copy_element_caption = QAction(QIcon.fromTheme("edit-copy"), "Copy C&aption")
         self.action_copy_element_caption.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 1))
