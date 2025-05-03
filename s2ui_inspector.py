@@ -105,6 +105,7 @@ class MainInspectorWindow(QMainWindow):
         self.elements_dock.tree.setMouseTracking(True)
         self.elements_dock.tree.itemEntered.connect(self.hover_element)
         self.elements_dock.setup_column_change(ElementsColumnText.SHOWN, self.update_element_visibility)
+        self.elements_dock.set_header_column_icon(ElementsColumnText.SHOWN, "view-visible", "Show Element (Visibility)")
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)

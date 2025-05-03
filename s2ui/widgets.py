@@ -20,7 +20,7 @@ Module for Qt widgets used in the UI.
 from typing import Callable
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QAction, QCursor, QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QCursor, QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (QAbstractScrollArea, QDockWidget, QLineEdit,
                              QMainWindow, QMenu, QToolBar, QTreeWidget,
                              QTreeWidgetItem, QVBoxLayout, QWidget)
@@ -100,6 +100,21 @@ class DockTree(QDockWidget):
     def setup_column_change(self, column: int, caller: Callable):
         """Assign a function to be called when a column is changed/checked."""
         self.on_changed[column] = caller
+
+    def set_header_column_icon(self, column: int, icon_name: str, tooltip: str = ""):
+        """Set the icon for a column header, if the icon is available on the system."""
+        header = self.tree.headerItem()
+        if not header:
+            return
+
+        icon = QIcon.fromTheme(icon_name)
+        if icon.isNull():
+            return
+
+        header.setTextAlignment(column, Qt.AlignmentFlag.AlignCenter)
+        header.setIcon(column, icon)
+        header.setToolTip(column, tooltip or header.text(column))
+        header.setText(column, "")
 
 
 class FilterBox(QLineEdit):
