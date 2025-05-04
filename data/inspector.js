@@ -222,6 +222,20 @@ function hideElement(id) {
     document.getElementById(id).classList.add("hidden");
 }
 
+function ignoreElement(id) {
+    //
+    // Explicitly passthrough the clicks for an element.
+    //
+    document.getElementById(id).classList.add("ignored");
+}
+
+function unignoreElement(id) {
+    //
+    // Undo the passthrough for clicks for an element.
+    //
+    document.getElementById(id).classList.remove("ignored");
+}
+
 window.onload = function() {
     // Wait for QWebChannel to be ready
     if (typeof python === "undefined") {

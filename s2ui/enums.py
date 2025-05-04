@@ -24,8 +24,9 @@ class ElementsColumnText(IntEnum):
     """Text column IDs for the elements tree"""
     ELEMENT = 0
     SHOWN = 1
-    CAPTION = 2
-    ID = 3
+    IGNORE = 2
+    CAPTION = 3
+    ID = 4
 
 
 class ElementsColumnData(IntEnum):

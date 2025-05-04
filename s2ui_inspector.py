@@ -98,14 +98,17 @@ class MainInspectorWindow(QMainWindow):
 
         # Dock: Elements
         self.elements_dock = s2ui.widgets.DockTree(self, "Elements", 400, Qt.DockWidgetArea.RightDockWidgetArea)
-        self.elements_dock.tree.setHeaderLabels(["Element", "Show", "Caption", "ID"])
+        self.elements_dock.tree.setHeaderLabels(["Element", "Show", "Ignore", "Caption", "ID"])
         self.elements_dock.tree.setColumnWidth(ElementsColumnText.ELEMENT, 225)
-        self.elements_dock.tree.setColumnWidth(ElementsColumnText.SHOWN, 40)
+        self.elements_dock.tree.setColumnWidth(ElementsColumnText.SHOWN, 30)
+        self.elements_dock.tree.setColumnWidth(ElementsColumnText.IGNORE, 30)
         self.elements_dock.tree.currentItemChanged.connect(self.inspect_element)
         self.elements_dock.tree.setMouseTracking(True)
         self.elements_dock.tree.itemEntered.connect(self.hover_element)
         self.elements_dock.setup_column_change(ElementsColumnText.SHOWN, self.update_element_visibility)
-        self.elements_dock.set_header_column_icon(ElementsColumnText.SHOWN, "view-visible", "Show Element (Visibility)")
+        self.elements_dock.setup_column_change(ElementsColumnText.IGNORE, self.update_element_ignored)
+        self.elements_dock.set_header_column_icon(ElementsColumnText.SHOWN, "view-visible", "Show Element")
+        self.elements_dock.set_header_column_icon(ElementsColumnText.IGNORE, "edit-none-symbolic", "Ignore Clicks")
 
         # Dock: Properties
         self.properties_dock = s2ui.widgets.DockTree(self, "Properties", 400, Qt.DockWidgetArea.RightDockWidgetArea)
@@ -130,6 +133,7 @@ class MainInspectorWindow(QMainWindow):
                                                self.action_script_src,
                                                self.action_script_checksum])
         self.elements_dock.setup_context_menu([self.action_element_visible,
+                                               self.action_element_ignore,
                                                self.action_parent_element,
                                                "|",
                                                self.action_copy_element_iid,
@@ -268,6 +272,12 @@ class MainInspectorWindow(QMainWindow):
         self.action_element_visible.setShortcut(QKeySequence.fromString("Ctrl+E"))
         self.action_element_visible.triggered.connect(self.toggle_element_visibility)
         self.menu_edit.addAction(self.action_element_visible)
+
+        self.action_element_ignore = QAction(QIcon.fromTheme("edit-none-symbolic"), "&Ignore Clicks")
+        self.action_element_ignore.setCheckable(True)
+        self.action_element_ignore.setShortcut(QKeySequence.fromString("Ctrl+I"))
+        self.action_element_ignore.triggered.connect(self.toggle_element_ignored)
+        self.menu_edit.addAction(self.action_element_ignore)
 
         self.action_parent_element = QAction(QIcon.fromTheme("view-list-tree-symbolic"), "Select &Parent")
         self.action_parent_element.setShortcut(QKeySequence.fromString("Ctrl+P"))
@@ -698,12 +708,13 @@ class MainInspectorWindow(QMainWindow):
             assert isinstance(area, str)
             assert isinstance(image_attr, str)
 
-            item = QTreeWidgetItem(parent, [iid, "", caption, element_id])
+            item = QTreeWidgetItem(parent, [iid, "", "", caption, element_id])
             item.setData(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole, element)
             item.setData(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole, get_s2ui_element_id(element))
             item.setToolTip(ElementsColumnText.CAPTION, caption)
             item.setToolTip(ElementsColumnText.ID, element_id)
             item.setCheckState(ElementsColumnText.SHOWN, Qt.CheckState.Checked)
+            item.setCheckState(ElementsColumnText.IGNORE, Qt.CheckState.Unchecked)
 
             if image_attr:
                 png = get_image_as_png(image_attr)
@@ -775,6 +786,7 @@ class MainInspectorWindow(QMainWindow):
             action.setEnabled(True)
 
         self.action_element_visible.setChecked(item.checkState(ElementsColumnText.SHOWN) == Qt.CheckState.Checked)
+        self.action_element_ignore.setChecked(item.checkState(ElementsColumnText.IGNORE) == Qt.CheckState.Checked)
         self.action_parent_element.setEnabled(item.parent() is not None)
 
         element: uiscript.UIScriptElement = item.data(ElementsColumnData.UISCRIPT_ELEMENT, Qt.ItemDataRole.UserRole)
@@ -1000,6 +1012,36 @@ class MainInspectorWindow(QMainWindow):
                     child.setData(c, Qt.ItemDataRole.ForegroundRole, None)
                 else:
                     child.setForeground(c, Qt.GlobalColor.gray)
+
+    def toggle_element_ignored(self):
+        """
+        Toggle the currently element to be ignored (for clicking through) via the context menu (action).
+        """
+        item = self.elements_dock.tree.currentItem()
+        if not item:
+            return
+
+        ignored = item.checkState(ElementsColumnText.IGNORE) == Qt.CheckState.Checked
+        self.action_element_ignore.setChecked(not ignored)
+        if ignored:
+            item.setCheckState(ElementsColumnText.IGNORE, Qt.CheckState.Unchecked)
+        else:
+            item.setCheckState(ElementsColumnText.IGNORE, Qt.CheckState.Checked)
+
+    def update_element_ignored(self, item: QTreeWidgetItem):
+        """
+        Mark the selected element as ignored so that clicks are passed through to elements below.
+        """
+        element_id = item.data(ElementsColumnData.ELEMENT_ID_S2UI, Qt.ItemDataRole.UserRole)
+        ignored = item.checkState(ElementsColumnText.IGNORE) == Qt.CheckState.Checked
+
+        if item == self.elements_dock.tree.currentItem():
+            self.action_element_ignore.setChecked(ignored)
+
+        if ignored:
+            self.webview_page.runJavaScript(f"ignoreElement('{element_id}')")
+        else:
+            self.webview_page.runJavaScript(f"unignoreElement('{element_id}')")
 
     def select_parent_element(self):
         """
