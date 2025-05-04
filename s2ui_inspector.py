@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (QAbstractScrollArea, QApplication, QDialog,
 
 import s2ui.config
 import s2ui.fontstyles
+import s2ui.known
 import s2ui.search
 import s2ui.widgets
 from s2ui.bridge import Bridge, get_image_as_png, get_s2ui_element_id
@@ -87,7 +88,7 @@ class MainInspectorWindow(QMainWindow):
         # Dock: UI Scripts
         self.uiscript_dock = s2ui.widgets.DockTree(self, "UI Scripts", 400, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.uiscript_dock.tree.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
-        self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Appears in", "Package"])
+        self.uiscript_dock.tree.setHeaderLabels(["Group ID", "Instance ID", "Caption Hint", "Used in", "Package"])
         self.uiscript_dock.tree.setColumnWidth(0, 120)
         self.uiscript_dock.tree.setColumnWidth(1, 100)
         self.uiscript_dock.tree.setColumnWidth(2, 150)
@@ -527,11 +528,13 @@ class MainInspectorWindow(QMainWindow):
                 self.game = game
 
         files: dict[tuple, dict[str, list[_File]]] = {}     # (group_id, instance_id): {checksum: [File, File, ...], ...}
+        found_games = set()
 
         for package_path in State.file_list:
             package = dbpf.DBPF(package_path)
             package_name = os.path.basename(package_path)
             game_name = package.game_name
+            found_games.add(game_name)
 
             # Create lookup of graphics by group and instance ID
             for entry in package.get_entries_by_type(dbpf.TYPE_IMAGE):
@@ -560,6 +563,16 @@ class MainInspectorWindow(QMainWindow):
         self.status_bar.showMessage("Populating file tree...")
         QApplication.processEvents()
 
+        # Find the latest expansion based on EXPANSION_ORDER
+        found_games_list = list(found_games)
+
+        # Start from the end of EXPANSION_ORDER to find the latest expansion
+        latest_game_name = ""
+        for game in reversed(s2ui.known.EXPANSION_ORDER):
+            if game in found_games_list:
+                latest_game_name = game
+                break
+
         def _get_name_label(games: list):
             return f"{len(games)} games" if len(games) > 1 else games[0]
 
@@ -585,6 +598,12 @@ class MainInspectorWindow(QMainWindow):
                 item.setToolTip(UIScriptColumnText.PACKAGE, "\n".join(this_package_names))
                 item.setData(UIScriptColumnData.DBPF_ENTRY, Qt.ItemDataRole.UserRole, entry)
                 item.setData(UIScriptColumnData.CHECKSUM, Qt.ItemDataRole.UserRole, checksum)
+
+                # Highlight the latest installation for this UI script
+                if not only_one and latest_game_name and latest_game_name in this_game_names:
+                    for col in range(0, item.columnCount()):
+                        item.setForeground(col, QColor(Qt.GlobalColor.cyan))
+                    item.setText(UIScriptColumnText.GAME, f"{item.text(UIScriptColumnText.GAME)} / Latest")
 
                 error_column_ids = [UIScriptColumnText.GROUP_ID, UIScriptColumnText.INSTANCE_ID]
 
