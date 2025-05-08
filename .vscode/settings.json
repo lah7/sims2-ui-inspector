@@ -1,14 +1,4 @@
 {
-    /* Module may be stored outside the repository */
-    "python.autoComplete.extraPaths": [
-      "${workspaceFolder}/../sims2-4k-ui-patch/"
-    ],
-    "python.analysis.extraPaths": [
-      "${workspaceFolder}/../sims2-4k-ui-patch/"
-    ],
-    "search.followSymlinks": true,
-
-    /* Python type checking and testing */
     "python.analysis.typeCheckingMode": "standard",
     "python.testing.unittestArgs": [
         "-v",
