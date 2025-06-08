@@ -263,7 +263,7 @@ class MainInspectorWindow(QMainWindow):
         self.menu_edit.addAction(self.action_script_src)
 
         self.action_script_checksum = QAction(QIcon.fromTheme("edit-copy"), "Copy &Checksum")
-        self.action_script_checksum.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.uiscript_dock.tree, 3, data=True))
+        self.action_script_checksum.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.uiscript_dock.tree, UIScriptColumnData.CHECKSUM, data=True))
         self.menu_edit.addAction(self.action_script_checksum)
 
         # ... for Elements dock
@@ -286,21 +286,21 @@ class MainInspectorWindow(QMainWindow):
         self.menu_edit.addAction(self.action_parent_element)
 
         self.action_copy_element_iid = QAction(QIcon.fromTheme("edit-copy"), "Copy &Interface ID")
-        self.action_copy_element_iid.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 0))
+        self.action_copy_element_iid.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, ElementsColumnText.ELEMENT))
 
         self.action_copy_element_caption = QAction(QIcon.fromTheme("edit-copy"), "Copy C&aption")
-        self.action_copy_element_caption.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 1))
+        self.action_copy_element_caption.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, ElementsColumnText.CAPTION))
 
         self.action_copy_element_id = QAction(QIcon.fromTheme("edit-copy"), "Copy &ID")
-        self.action_copy_element_id.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, 2))
+        self.action_copy_element_id.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.elements_dock.tree, ElementsColumnText.ID))
 
         # ... for Properties dock
         self.menu_edit.addSeparator()
         self.action_copy_attribute = QAction(QIcon.fromTheme("edit-copy"), "Copy &Attribute")
-        self.action_copy_attribute.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 0))
+        self.action_copy_attribute.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, PropertiesColumnText.ATTRIBUTE))
 
         self.action_copy_value = QAction(QIcon.fromTheme("edit-copy"), "Copy &Value")
-        self.action_copy_value.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, 1))
+        self.action_copy_value.triggered.connect(lambda: self._copy_tree_item_to_clipboard(self.properties_dock.tree, PropertiesColumnText.VALUE))
 
         self.action_similar_attrib = QAction(QIcon.fromTheme("edit-find"), "Find elements with this &attribute")
         self.action_similar_attrib.triggered.connect(lambda: self.open_global_search(True, False))
