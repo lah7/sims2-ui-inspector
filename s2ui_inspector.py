@@ -383,7 +383,7 @@ class MainInspectorWindow(QMainWindow):
         self.menu_help.addAction(self.action_about_qt)
 
         self.action_about_app = QAction(QIcon.fromTheme("help-about"), "&About S2UI Inspector")
-        self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA graphical user interface viewer for The Sims 2."))
+        self.action_about_app.triggered.connect(lambda: QMessageBox.about(self, "About S2UI Inspector", f"S2UI Inspector v{VERSION}\n{PROJECT_URL}\n\nA fan-made graphical user interface viewer for The Sims 2."))
         self.menu_help.addAction(self.action_about_app)
 
     def _copy_to_clipboard(self, text: str|int):
