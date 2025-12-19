@@ -27,7 +27,7 @@ build_exe_options = {
 
 setup(
     name="s2ui_inspector",
-    version="0.2.0",
+    version="0.3.0",
     description="UI Inspector for The Sims 2",
     options={"build_exe": build_exe_options},
     executables=[Executable("s2ui_inspector.py", base="gui", icon="data/icon")],
